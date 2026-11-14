@@ -20,4 +20,8 @@ ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2 code and design
 
 ## Phase 3A research audit
 
-The research catalogue migration and audit are documented in `research/PHASE3A_REPORT.md`. The repository includes a compressed, topic-indexed copy of the validated Phase 1 database at `data/flame_research.db.gz`. This checkpoint prepares source classifications; it does not connect the database to the Streamlit pages. Milestone 3B is pending approval.
+The research catalogue migration and audit are documented in `research/PHASE3A_REPORT.md`. The repository includes a compressed, topic-indexed copy of the validated Phase 1 database at `data/flame_research.db.gz`. The 3A checkpoint prepared source classifications without connecting the database to the Streamlit pages.
+
+## Phase 3B backend
+
+The standalone `backend` package provides read-only scientific data services, integrity validation, Pandas/NumPy descriptive summaries, FTS5 passage search, and a restricted SQL interface over approved projections. See `research/PHASE3B_REPORT.md` for its scope and limits. Run `python -m pytest tests/test_backend.py tests/test_phase3a.py -q` with `requirements.txt` and `requirements-dev.txt` installed. Streamlit integration begins only after the 3C checkpoint is approved.

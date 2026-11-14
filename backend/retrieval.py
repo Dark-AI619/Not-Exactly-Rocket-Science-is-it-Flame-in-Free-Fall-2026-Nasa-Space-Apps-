@@ -4,15 +4,8 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Protocol
 
 from .store import ResearchError, ResearchStore
-
-
-class OptionalLLMProvider(Protocol):
-    """Future opt-in generator; no provider is configured or invoked in Phase 3."""
-
-    def draft(self, question: str, evidence_packet: dict) -> str: ...
 
 
 ALIASES = {

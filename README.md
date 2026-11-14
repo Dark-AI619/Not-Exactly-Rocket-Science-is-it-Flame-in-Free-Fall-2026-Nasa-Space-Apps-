@@ -41,3 +41,7 @@ Compare & Analyze filters admitted FLEX tests by fuel, oxygen mole fraction, pre
 ## Phase 3F local readiness
 
 The full local integration audit is documented in `research/PHASE3F_READINESS.md`. All 30 automated tests pass and all six sections load locally. The integrated backend is usable for the admitted FLEX report subset and source-linked documentary retrieval. Mir fire facts, BASS-II numerical comparisons and authentic experiment footage remain outside the approved corpus; the interface reports those gaps rather than filling them from unreviewed material. The development branch is not the public Streamlit deployment.
+
+## Phase 4A optional Groq configuration
+
+The official Groq SDK is an optional generation boundary in `backend/groq_adapter.py`. No model call is wired into the dashboard yet. The existing deterministic evidence mode works with no API key. Copy `.env.example` values into private environment variables or `.streamlit/secrets.toml` (never commit that file). `GROQ_API_KEY` is the only secret. `GROQ_MODEL` defaults to `qwen/qwen3.8-27b`; confirm that the chosen model is still available on the owner's free-tier account before any live request. `GROQ_MAX_OUTPUT_TOKENS`, `GROQ_REQUEST_TIMEOUT` and `AI_SESSION_REQUEST_LIMIT` have bounded defaults. See `research/PHASE4A_REPORT.md` for the offline mock results and limits.

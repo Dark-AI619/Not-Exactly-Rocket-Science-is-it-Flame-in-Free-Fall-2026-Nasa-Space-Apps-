@@ -6,7 +6,9 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, build_comparison, retrieve_evidence, validate_database
+from backend import (GroqAdapter, QueryRejected, ResearchError, ResearchStore, RestrictedSQL,
+                     build_comparison, load_groq_settings, research_turn, retrieve_evidence,
+                     validate_database)
 
 ASSETS = Path(__file__).parent / "assets"
 ASTRONAUT = ASSETS / "space_apps_astronaut.jpg"
@@ -533,6 +535,51 @@ def cached_evidence(question, investigation=None, domain=None, topic=None):
                                  domain_id=domain, topic_id=topic)
 
 
+@st.cache_resource(show_spinner=False)
+def ai_adapter():
+    return GroqAdapter(load_groq_settings())
+
+
+def optional_answer(packet, *, history=()):
+    """One shared provider boundary and request budget for both research workspaces."""
+    used = st.session_state.get("ai_request_count", 0)
+    result, new_used = research_turn(packet, ai_adapter(), used, history=history)
+    st.session_state["ai_request_count"] = new_used
+    return result
+
+
+def answer_status(result, *, show_evidence_summary=True):
+    if result.mode == "model":
+        st.caption("AI explanation · each statement passed citation and numerical checks; inspect sources below.")
+        for claim in result.claims:
+            st.write(claim)
+        return
+    messages = {
+        "missing_key": "Generative mode is unavailable here. Verified source evidence remains available; visitors do not need an API key.",
+        "missing_evidence": "The approved corpus cannot support a factual answer to this question yet.",
+        "no_safe_evidence": "No safe source excerpt was available for generation.",
+        "session_limit": "This session has reached its AI request limit. Verified evidence remains available.",
+        "rate_limited": "The AI provider is rate limited. Showing verified evidence instead.",
+        "authentication_failed": "The AI provider is unavailable due to configuration. Showing verified evidence instead.",
+        "provider_unavailable": "The AI provider is temporarily unavailable. Showing verified evidence instead.",
+        "claim_validation_failed": "The generated answer did not pass source checks. Showing verified evidence instead.",
+        "empty_response": "The AI provider returned no answer. Showing verified evidence instead.",
+    }
+    st.info(messages.get(result.status, "Showing verified evidence without a generated answer."))
+    if show_evidence_summary:
+        evidence_summary(result.evidence_packet)
+
+
+def supporting_citations(result):
+    if not result.citations:
+        st.caption("No generated claims were admitted. Inspect the verified evidence records below.")
+        return
+    for item in result.citations:
+        st.write(f'[{item["id"]}] {item["source_title"]} · {item["location"]}' +
+                 (f' · {item["experiment_id"]}' if item.get("experiment_id") else ""))
+        st.link_button(f'Open source {item["id"]}', item["source_url"])
+
+
 def evidence_summary(packet):
     route = packet["route"]
     st.caption(f'DETERMINISTIC EVIDENCE SUMMARY · {route["domain"].upper()} · {route["intent"].upper()} · not an LLM-generated answer')
@@ -578,21 +625,31 @@ def lab():
         st.caption("Only approved passages, objective summaries and validated records are retrieved.")
     if st.button("Gather research evidence", type="primary"):
         try:
-            st.session_state["lab_packet"] = cached_evidence(problem, investigation=investigation)
+            packet = cached_evidence(problem, investigation=investigation)
+            with st.spinner("Checking the selected research evidence..."):
+                st.session_state["lab_result"] = optional_answer(packet)
             st.session_state["lab_question"] = problem
         except (ResearchError, OSError) as exc:
             st.error(str(exc))
-    packet = st.session_state.get("lab_packet")
-    if packet is not None:
+    result = st.session_state.get("lab_result")
+    if result is not None:
+        packet = result.evidence_packet
         evidence, considerations = st.columns([1.5, 1], gap="large")
         with evidence:
-            html('<div class="step">03 / REVIEW EVIDENCE</div>')
+            html('<div class="step">03 / VERIFIED OBSERVATIONS</div>')
             evidence_summary(packet)
             evidence_items(packet, compact=True)
+            html('<div class="step">04 / SCIENTIFIC INTERPRETATION</div>')
+            answer_status(result, show_evidence_summary=False)
         with considerations:
-            html('<div class="step">04 / DESIGN CONSIDERATIONS</div>')
-            st.info("Research prompts, not experimental findings or a certified design:")
-            st.markdown("- Check whether the source fuel, atmosphere, pressure and apparatus match the proposed use.\n- Identify unmeasured conditions and missing records.\n- Plan independent engineering review and further testing before any safety decision.")
+            html('<div class="step">05 / POSSIBLE ENGINEERING DIRECTIONS</div>')
+            st.write("If the retrieved conditions match the proposed use, consider testing the proposed control under independently reviewed conditions. Identify missing measurements before selecting a design.")
+            html('<div class="step">06 / ASSUMPTIONS AND LIMITATIONS</div>')
+            st.write("These records cover the admitted research subset. A design would require its own fuel, atmosphere, pressure, apparatus and safety review. No spacecraft certification is implied.")
+            for note in packet["notices"]:
+                st.caption(note)
+            html('<div class="step">07 / SUPPORTING CITATIONS</div>')
+            supporting_citations(result)
             st.caption("Problem entered: " + st.session_state.get("lab_question", ""))
     else:
         st.caption("Enter a problem to retrieve source-linked evidence. No engineering solution is generated automatically.")
@@ -601,8 +658,9 @@ def lab():
 
 def assistant():
     heading("04 / EVIDENCE-LED DIALOGUE", "AI Research Assistant",
-            "Ask research questions and inspect a deterministic, cited evidence summary from the approved corpus.")
-    st.info("Local evidence mode is active. No language model or paid API is connected; results are retrieved source records, not generated scientific answers.")
+            "Ask research questions, inspect original sources, and use optional source-checked explanations when the provider is configured.")
+    if not ai_adapter().settings.configured:
+        st.info("Generative mode is unavailable without an owner-configured key. Verified evidence mode is ready; visitors do not need an API key.")
     conversation, evidence = st.columns([1.35, 1], gap="large")
     with conversation:
         html('<div class="section-title" style="margin-top:0">Conversation</div>')
@@ -613,7 +671,7 @@ def assistant():
                 if message["role"] == "user":
                     st.write(message["text"])
                 else:
-                    evidence_summary(message["packet"])
+                    answer_status(message["result"])
                     st.caption("Open the evidence inspector for the exact source passages and measurement cells.")
         prompt = st.text_input("Research question", placeholder="Ask about FLEX, BASS-II, smoke detection, or a specific test")
         with ResearchStore() as store:
@@ -625,21 +683,29 @@ def assistant():
         with topic_col:
             topic = st.selectbox("Topic scope", [None, *topic_labels],
                                  format_func=lambda key: topic_labels.get(key, "Route from question"))
-        if st.button("Retrieve evidence", type="primary"):
+        remaining = max(0, ai_adapter().settings.session_request_limit - st.session_state.get("ai_request_count", 0))
+        if ai_adapter().settings.configured:
+            st.caption(f"AI requests remaining this session: {remaining}")
+        if st.button("Ask and inspect", type="primary"):
             try:
                 packet = cached_evidence(prompt, investigation=scope, topic=topic)
+                history = tuple(m["text"] for m in st.session_state["research_chat"] if m["role"] == "user")[-2:]
+                with st.spinner("Retrieving and checking source evidence..."):
+                    result = optional_answer(packet, history=history)
                 st.session_state["research_chat"].extend([
-                    {"role": "user", "text": prompt}, {"role": "assistant", "packet": packet},
+                    {"role": "user", "text": prompt}, {"role": "assistant", "result": result},
                 ])
+                st.session_state["research_chat"] = st.session_state["research_chat"][-12:]
                 st.rerun()
             except (ResearchError, OSError) as exc:
                 st.error(str(exc))
     with evidence:
         html('<div class="section-title" style="margin-top:0">Evidence inspector</div>')
-        latest = next((m["packet"] for m in reversed(st.session_state.get("research_chat", []))
+        latest = next((m["result"] for m in reversed(st.session_state.get("research_chat", []))
                        if m["role"] == "assistant"), None)
         if latest:
-            evidence_items(latest, compact=True)
+            supporting_citations(latest)
+            evidence_items(latest.evidence_packet, compact=True)
         else:
             st.caption("Ask a question to see source citations, PDF pages and original measurements here.")
 

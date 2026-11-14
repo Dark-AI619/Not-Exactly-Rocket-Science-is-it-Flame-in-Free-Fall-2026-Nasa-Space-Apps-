@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is being connected to verified research in staged Phase 3 checkpoints. Checkpoint 3C connects Research Explorer and Research Records; 3D adds descriptive FLEX comparisons; 3E adds deterministic, cited evidence retrieval in Assistant, Solution Lab and View Effect. No language model or physical simulation is connected. No sample measurements are invented.
+An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is connected to verified research in staged development checkpoints. Phase 3 provides real FLEX records, descriptive comparisons and source retrieval. Phase 4C adds optional, source-checked Groq explanations to Assistant and Solution Lab on the development branch. The public deployment remains on the earlier Phase 3B version. No physical simulation or sample measurements are invented.
 
 ## Run locally
 
@@ -16,7 +16,7 @@ The project owner supplied two images. The astronaut and NASA International Spac
 
 ## AI assistance
 
-ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2 and 3 code and design. Generated Python files carry the required co-author comment. The Assistant offers deterministic source retrieval, not LLM-generated answers.
+ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2–4 code and design. Generated Python files carry the required co-author comment. Without an owner-configured Groq key, Assistant and Solution Lab provide deterministic source retrieval; no visitor key is requested.
 
 ## Phase 3A research audit
 
@@ -44,8 +44,12 @@ The full local integration audit is documented in `research/PHASE3F_READINESS.md
 
 ## Phase 4A optional Groq configuration
 
-The official Groq SDK is an optional generation boundary in `backend/groq_adapter.py`. No model call is wired into the dashboard yet. The existing deterministic evidence mode works with no API key. Copy `.env.example` values into private environment variables or `.streamlit/secrets.toml` (never commit that file). `GROQ_API_KEY` is the only secret. `GROQ_MODEL` defaults to `qwen/qwen3.8-27b`; confirm that the chosen model is still available on the owner's free-tier account before any live request. `GROQ_MAX_OUTPUT_TOKENS`, `GROQ_REQUEST_TIMEOUT` and `AI_SESSION_REQUEST_LIMIT` have bounded defaults. See `research/PHASE4A_REPORT.md` for the offline mock results and limits.
+The official Groq SDK is an optional generation boundary in `backend/groq_adapter.py`. The existing deterministic evidence mode works with no API key. Copy `.env.example` values into private environment variables or `.streamlit/secrets.toml` (never commit that file). `GROQ_API_KEY` is the only secret. `GROQ_MODEL` defaults to `qwen/qwen3.8-27b`; confirm that the chosen model is still available on the owner's free-tier account before any live request. `GROQ_MAX_OUTPUT_TOKENS`, `GROQ_REQUEST_TIMEOUT` and `AI_SESSION_REQUEST_LIMIT` have bounded defaults. See `research/PHASE4A_REPORT.md` for the offline mock results and limits.
 
 ## Phase 4B grounded answer service
 
-`backend/grounded.py` takes the existing category-routed evidence packet, supplies at most six admitted items within an 11,000-character context, and requests short citation-tagged JSON claims through the optional Groq adapter. It checks citation IDs, source vocabulary and numbers against cited evidence before exposing any generated claim. Unsupported answers and provider failures return the original deterministic packet. This backend service is not yet connected to the Streamlit interface; see `research/PHASE4B_REPORT.md` for offline tests and the limits of heuristic claim verification.
+`backend/grounded.py` takes the existing category-routed evidence packet, supplies at most six admitted items within an 11,000-character context, and requests short citation-tagged JSON claims through the optional Groq adapter. It checks citation IDs, source vocabulary and numbers against cited evidence before exposing any generated claim. Unsupported answers and provider failures return the original deterministic packet. See `research/PHASE4B_REPORT.md` for offline tests and the limits of heuristic claim verification.
+
+## Phase 4C Assistant and Solution Lab
+
+The development-branch Assistant and Solution Lab now use the same `research_turn` service, optional Groq adapter, citation checks and per-session request budget. Assistant retains a short conversation and sends at most two prior questions as phrasing context; only current retrieved evidence supports claims. Solution Lab separates verified observations, checked interpretation, conditional engineering directions, limitations and citations. Missing keys, unsupported questions and provider errors retain the verified evidence view. See `research/PHASE4C_REPORT.md` for tests and remaining limits. No live Groq request or public deployment occurred in this checkpoint.

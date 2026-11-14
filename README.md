@@ -12,7 +12,7 @@ Phase 1 produced a separately preserved, validated transcription subset of FLEX 
 
 ## Artwork and attribution
 
-The astronaut and NASA International Space Apps Challenge artwork was supplied by the project owner. It is used as a whole image to retain its existing branding. Its use does not imply that NASA operates or endorses this independent dashboard. A separate flame-over-Earth image has not yet been supplied. Confirm image redistribution rights before public deployment.
+The project owner supplied two images. The astronaut and NASA International Space Apps Challenge artwork appears only in the Research Explorer hero, with its branding preserved. The flame-over-Earth artwork appears in View Effect as a conceptual illustration, not experimental footage. Their use does not imply that NASA operates or endorses this independent dashboard.
 
 ## AI assistance
 

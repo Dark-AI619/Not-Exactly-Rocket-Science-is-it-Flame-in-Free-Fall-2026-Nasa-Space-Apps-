@@ -121,21 +121,42 @@ class ResearchStore:
         self, *, investigation_id: str | None = None, domain_id: str | None = None,
         topic_id: str | None = None, admitted_only: bool = False, limit: int = 100,
     ) -> list[dict]:
-        sql = "SELECT * FROM source_catalogue WHERE 1=1"
+        sql = "SELECT c.* FROM source_catalogue c WHERE 1=1"
         params: list = []
         for column, value in (
             ("investigation_id", investigation_id),
             ("domain_id", domain_id),
-            ("primary_topic_id", topic_id),
         ):
             if value is not None:
-                sql += f" AND {column}=?"
+                sql += f" AND c.{column}=?"
                 params.append(value)
+        if topic_id is not None:
+            # A source can cover a topic in a page or measurement even when its
+            # catalogue's primary topic is broader.
+            sql += """ AND (
+                c.primary_topic_id=?
+                OR EXISTS (
+                    SELECT 1 FROM passages p JOIN passage_topics t ON t.passage_id=p.id
+                    WHERE p.source_id=c.source_id AND t.topic_id=?
+                )
+                OR EXISTS (
+                    SELECT 1 FROM measurements m JOIN measurement_topics t ON t.measurement_id=m.id
+                    WHERE m.source_id=c.source_id AND t.topic_id=?
+                )
+            )"""
+            params.extend((topic_id, topic_id, topic_id))
         if admitted_only:
             sql += " AND admission_status<>'CATALOGUE_ONLY'"
         sql += " ORDER BY key LIMIT ?"
         params.append(_bound(limit))
         return _rows(self.db.execute(sql, params))
+
+    def fuels(self, investigation_id: str = "FLEX") -> list[str]:
+        return [row[0] for row in self.db.execute(
+            """SELECT DISTINCT fuel FROM experiments
+               WHERE investigation_id=? AND validation_status='VALIDATED' AND fuel IS NOT NULL
+               ORDER BY fuel""", (investigation_id,)
+        )]
 
     def source(self, key: str) -> dict:
         row = self.db.execute("SELECT * FROM source_catalogue WHERE key=?", (key,)).fetchone()
@@ -154,8 +175,11 @@ class ResearchStore:
         self, *, investigation_id: str | None = None, fuel: str | None = None,
         test_query: str | None = None, oxygen_min: float | None = None,
         oxygen_max: float | None = None, pressure_min: float | None = None,
-        pressure_max: float | None = None, limit: int = 100, offset: int = 0,
+        pressure_max: float | None = None, measurement_variable: str = "burn_time_s",
+        limit: int = 100, offset: int = 0,
     ) -> list[dict]:
+        if measurement_variable not in VARIABLE_UNITS:
+            raise ResearchError(f"unsupported measurement variable: {measurement_variable}")
         oxygen_min = _finite(oxygen_min, "oxygen_min")
         oxygen_max = _finite(oxygen_max, "oxygen_max")
         pressure_min = _finite(pressure_min, "pressure_min")
@@ -171,13 +195,22 @@ class ResearchStore:
             SELECT e.id,e.investigation_id,e.original_test_id,e.fuel,e.test_date,e.gmt,
                    e.test_end,e.data_origin,e.validation_status,
                    o.numeric_value AS oxygen_mole_fraction,
-                   p.numeric_value AS pressure_mmhg
+                   p.numeric_value AS pressure_mmhg,
+                   selected.original_value AS measurement_original,
+                   selected.original_unit AS measurement_unit,
+                   selected.numeric_value AS measurement_numeric,
+                   selected.classification AS measurement_classification,
+                   selected.uncertainty AS measurement_uncertainty,
+                   selected.page AS measurement_page,
+                   s.title AS source_title,s.source_url,s.rights AS source_rights
             FROM experiments e
             LEFT JOIN measurements o ON o.experiment_id=e.id AND o.variable='oxygen_mole_fraction'
             LEFT JOIN measurements p ON p.experiment_id=e.id AND p.variable='pressure_mmhg'
+            LEFT JOIN measurements selected ON selected.experiment_id=e.id AND selected.variable=?
+            JOIN sources s ON s.id=e.source_id
             WHERE e.validation_status='VALIDATED'
         """
-        params: list = []
+        params: list = [measurement_variable]
         if investigation_id is not None:
             sql += " AND e.investigation_id=?"
             params.append(investigation_id)

@@ -1,8 +1,11 @@
 # Co-authored with ChatGPT
-"""Flame in Freefall — Phase 2 visual research interface."""
+"""Flame in Freefall — source-linked research interface."""
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
+
+from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, validate_database
 
 ASSETS = Path(__file__).parent / "assets"
 ASTRONAUT = ASSETS / "space_apps_astronaut.jpg"
@@ -95,52 +98,280 @@ def surface(label, title, body, accent="cyan"):
 
 
 def explorer():
-    copy, art = st.columns([1.05, 1], gap="large", vertical_alignment="center")
-    with copy:
-        html('<div class="hero-copy"><div class="eyebrow">NASA SPACE APPS CHALLENGE 2026 · RESEARCH EXPLORER</div><h1>Flame in<br><span style="color:#f0a16d">Freefall.</span></h1><p class="lede">Explore the evidence behind combustion and fire safety in microgravity. Follow original investigations, examine what was measured, and keep scientific limits in view.</p><span class="smallcaps">DISCOVER / INSPECT / REASON</span></div>')
-    with art:
-        html(f'<figure class="hero-art"><img src="data:image/jpeg;base64,{astronaut_data}" alt="NASA International Space Apps Challenge artwork with astronaut"><figcaption>Supplied Space Apps Challenge artwork · original branding preserved</figcaption></figure>')
-    html('<div class="statusline"><b>RESEARCH PREVIEW</b> &nbsp;·&nbsp; Six workspaces &nbsp;·&nbsp; Verified source integration pending &nbsp;·&nbsp; Independent Space Apps project</div>')
-    html('<div class="section-title">Explore the research</div>')
-    st.text_input("Search investigations", placeholder="Search source-linked investigations", disabled=True)
-    a, b, c = st.columns(3, gap="medium")
-    with a:
-        surface("01 / FLAME EXTINCTION", "FLEX", "Liquid-fuel droplet combustion and extinction. A validated report transcription subset is prepared for future integration.", "orange")
-    with b:
-        surface("02 / MATERIAL BEHAVIOR", "BASS-II", "Solid-fuel behavior under varied geometry and airflow. Experimental records remain in source review.")
-    with c:
-        surface("03 / FIRE SAFETY", "SAME-R & Saffire", "Smoke detection and spacecraft fire studies. Browse the documented investigation scope.", "orange")
-    html('<div class="section-title">Research path</div>')
-    a, b, c = st.columns(3, gap="medium")
-    with a:
-        surface("DISCOVER", "Find an investigation", "Locate a research family and its published source.")
-    with b:
-        surface("INSPECT", "Read the evidence", "Check test conditions, units, missing values, and provenance.")
-    with c:
-        surface("INTERPRET", "Compare with care", "Review limitations before drawing engineering conclusions.")
-    st.caption("NASA is a research source; it does not operate or endorse this independent dashboard.")
+    try:
+        store = ResearchStore()
+        audit = validate_database(store)
+    except (OSError, ResearchError, ValueError) as exc:
+        st.error(f"Verified research database unavailable: {exc}")
+        st.stop()
+    with store:
+        copy, art = st.columns([1.05, 1], gap="large", vertical_alignment="center")
+        with copy:
+            html('<div class="hero-copy"><div class="eyebrow">NASA SPACE APPS CHALLENGE 2026 · RESEARCH EXPLORER</div><h1>Flame in<br><span style="color:#f0a16d">Freefall.</span></h1><p class="lede">Explore the evidence behind combustion and fire safety in microgravity. Follow original investigations, examine what was measured, and keep scientific limits in view.</p><span class="smallcaps">DISCOVER / INSPECT / REASON</span></div>')
+        with art:
+            html(f'<figure class="hero-art"><img src="data:image/jpeg;base64,{astronaut_data}" alt="NASA International Space Apps Challenge artwork with astronaut"><figcaption>Supplied Space Apps Challenge artwork · original branding preserved</figcaption></figure>')
+        html(f'<div class="statusline"><b>VERIFIED RESEARCH</b> &nbsp;·&nbsp; {audit["experiments"]} report-extracted FLEX tests &nbsp;·&nbsp; {audit["passages"]} searchable PDF pages &nbsp;·&nbsp; {audit["sources"]} catalogued sources</div>')
+        html('<div class="section-title">Discover research</div>')
+        search = st.text_input("Search sources and report passages", placeholder="Try FLEX, droplet, oxygen, or smoke")
+        domains = {row["id"]: row["label"] for row in store.domains()}
+        left, middle, right = st.columns(3, gap="small")
+        with left:
+            domain = st.selectbox("Research domain", [None, *domains], format_func=lambda key: domains.get(key, "All domains"))
+        topics = store.topics(domain)
+        topic_names = {row["id"]: row["label"] for row in topics}
+        with middle:
+            topic = st.selectbox("Scientific topic", [None, *topic_names], format_func=lambda key: topic_names.get(key, "All topics"))
+        investigations = store.investigations(domain)
+        investigation_names = {row["id"]: row["name"] for row in investigations}
+        with right:
+            investigation = st.selectbox("Investigation", [None, *investigation_names],
+                                         format_func=lambda key: investigation_names.get(key, "All investigations"))
+
+        if investigations:
+            html('<div class="section-title">Investigation availability</div>')
+            availability = pd.DataFrame([
+                {
+                    "Investigation": row["name"],
+                    "Validated numerical tests": row["admitted_experiments"],
+                    "Searchable PDF pages": row["admitted_passages"],
+                    "Coverage": "Numerical + documentary" if row["admitted_experiments"]
+                                else "Documentary only" if row["admitted_passages"]
+                                else "Catalogue / objective summary",
+                }
+                for row in investigations
+            ])
+            st.dataframe(availability, hide_index=True, width="stretch")
+        else:
+            st.caption("This domain contains background or reference sources without named experiment records.")
+        if investigation is not None:
+            coverage = store.coverage(investigation)
+            st.caption(coverage["coverage_note"])
+            if coverage["admitted_experiments"]:
+                if st.button(f"Open {investigation} experiments", type="primary"):
+                    st.session_state["records_investigation"] = investigation
+                    st.switch_page(pages[1])
+
+        hits = []
+        if search.strip():
+            try:
+                hits = store.passages(search.strip(), investigation_id=investigation, topic_id=topic, limit=5)
+            except ResearchError as exc:
+                st.warning(str(exc))
+        sources = store.sources(investigation_id=investigation, domain_id=domain, topic_id=topic)
+        if search.strip():
+            query = search.strip().casefold()
+            hit_urls = {hit["source_url"] for hit in hits}
+            sources = [item for item in sources if query in item["title"].casefold()
+                       or query in (item["identifier"] or "").casefold()
+                       or item["url"] in hit_urls]
+        html('<div class="section-title">Source catalogue</div>')
+        if sources:
+            st.dataframe(pd.DataFrame([
+                {
+                    "Source": item["title"],
+                    "Investigation": item["investigation_id"] or "—",
+                    "Kind": item["source_type"],
+                    "Verification": item["verification_status"],
+                    "Availability": item["admission_status"],
+                }
+                for item in sources
+            ]), hide_index=True, width="stretch")
+            by_key = {item["key"]: item for item in sources}
+            chosen = st.selectbox("Inspect a source", list(by_key),
+                                  format_func=lambda key: f'{by_key[key]["title"]} · {key}')
+            source = by_key[chosen]
+            detail, action = st.columns([2, 1], gap="large")
+            with detail:
+                st.markdown(f'**{source["title"]}**')
+                st.caption(f'Identifier: {source["identifier"] or "Not supplied"} · Publisher: {source["publisher"]}')
+                st.caption(f'Verification: {source["verification_status"]} · Rights: {source["rights_status"]} · Admission: {source["admission_status"]}')
+                for evidence in store.source_evidence(chosen):
+                    st.write(f'{evidence["source_location"]}: {evidence["summary"]}')
+            with action:
+                st.link_button("Open original source", source["url"])
+        else:
+            st.info("No catalogued source matches these filters. This does not imply a negative experimental result.")
+
+        if search.strip():
+            html('<div class="section-title">Matching report pages</div>')
+            if hits:
+                for hit in hits:
+                    with st.expander(f'{hit["source_title"]} · PDF page {hit["page"]}'):
+                        st.write(hit["excerpt"])
+                        st.link_button("Open source record", hit["source_url"])
+                        st.caption("PDF text supports discovery; verify numerical details against the printed table.")
+            else:
+                st.caption("No approved PDF passage matches the current search and scope.")
+        st.caption("NASA is a research source; it does not operate or endorse this independent dashboard.")
 
 
 def records():
-    heading("01 / SOURCE RECORDS", "Research Records", "A structured view for original test IDs, conditions, measurements, uncertainty, and source provenance.")
-    html('<div class="section-title">Record browser</div>')
-    search, family, measure = st.columns([2, 1, 1], gap="small")
-    with search:
-        st.text_input("Find a record", placeholder="Test ID or source keyword", disabled=True)
-    with family:
-        st.selectbox("Investigation", ["All investigations"], disabled=True)
-    with measure:
-        st.selectbox("Measurement", ["All fields"], disabled=True)
-    table, inspector = st.columns([2.5, 1], gap="large")
-    with table:
-        html('<div class="table-wrap"><table class="data-table"><thead><tr><th>Investigation</th><th>Test ID</th><th>Fuel / material</th><th>Atmosphere</th><th>Measurement</th><th>Units</th><th>Source page</th></tr></thead><tbody><tr><td colspan="7">Validated experiment rows will appear when the scientific database is connected.</td></tr></tbody></table></div>')
-        html('<div class="editor-head"><div class="section-title" style="margin:0">SQL editor</div><span class="smallcaps">READ-ONLY PREVIEW</span></div>')
-        html('<div class="code-frame">SELECT test_id, fuel, atmosphere, measurement, unit<br>FROM verified_experiments<br>WHERE investigation_id = :investigation;</div>')
-        st.caption("Query execution is disabled in this frontend milestone.")
-    with inspector:
-        html('<div class="section-title" style="margin-top:.1rem">Experiment detail</div>')
-        html('<div class="surface"><span class="smallcaps">NO RECORD SELECTED</span><h3>Source inspector</h3><div class="inspector-line"><span>Original test ID</span><span>—</span></div><div class="inspector-line"><span>Printed page / table</span><span>—</span></div><div class="inspector-line"><span>Uncertainty</span><span>—</span></div><div class="inspector-line"><span>Data origin</span><span>—</span></div><div class="inspector-line"><span>Validation</span><span>—</span></div></div>')
-        st.caption("Blank values represent no selected record, not measured zeros.")
+    heading("01 / SOURCE RECORDS", "Research Records",
+            "Inspect validated original test IDs, conditions, measurements, units, and NASA report provenance.")
+    try:
+        store = ResearchStore()
+        validate_database(store)
+    except (OSError, ResearchError, ValueError) as exc:
+        st.error(f"Verified research database unavailable: {exc}")
+        st.stop()
+    with store:
+        coverage = store.investigations()
+        ids = [row["id"] for row in coverage]
+        requested = st.session_state.pop("records_investigation", None)
+        if requested in ids:
+            st.session_state["record_family"] = requested
+        investigation = st.selectbox("Investigation", ids, index=ids.index("FLEX"), key="record_family")
+        scope = store.coverage(investigation)
+        st.caption(scope["coverage_note"])
+
+        if scope["admitted_experiments"]:
+            html('<div class="section-title">Filter verified experiments</div>')
+            search, fuel_col, measure_col = st.columns([1.4, 1, 1.3], gap="small")
+            with search:
+                test_query = st.text_input("Test ID contains", placeholder="Example: FLEX–130")
+            with fuel_col:
+                fuel = st.selectbox("Fuel", ["All fuels", *store.fuels(investigation)])
+            variable_names = {
+                "pressure_mmhg": "Atmospheric pressure · mmHg",
+                "oxygen_mole_fraction": "Oxygen mole fraction",
+                "nitrogen_mole_fraction": "Nitrogen mole fraction",
+                "carbon_dioxide_mole_fraction": "Carbon dioxide mole fraction",
+                "helium_mole_fraction": "Helium mole fraction",
+                "initial_diameter_mm": "Initial droplet diameter · mm",
+                "visible_extinction_diameter_mm": "Visible extinction diameter · mm",
+                "burning_rate_mm2_s": "Burning-rate constant · mm²/s",
+                "burn_time_s": "Burn duration · s",
+            }
+            with measure_col:
+                variable = st.selectbox("Measurement column", list(variable_names),
+                                        format_func=lambda key: variable_names[key])
+            oxygen_filter, pressure_filter = st.columns(2, gap="medium")
+            with oxygen_filter:
+                use_oxygen = st.checkbox("Filter oxygen mole fraction")
+                oxygen_range = st.slider("O₂ mole fraction", 0.0, 1.0, (0.12, 0.34), 0.01,
+                                         disabled=not use_oxygen)
+            with pressure_filter:
+                use_pressure = st.checkbox("Filter pressure (mmHg)")
+                pressure_range = st.slider("Pressure · mmHg", 0.0, 2400.0,
+                                           (500.0, 2350.0), 10.0, disabled=not use_pressure)
+            try:
+                matches = store.experiments(
+                    investigation_id=investigation,
+                    fuel=None if fuel == "All fuels" else fuel,
+                    test_query=test_query,
+                    oxygen_min=oxygen_range[0] if use_oxygen else None,
+                    oxygen_max=oxygen_range[1] if use_oxygen else None,
+                    pressure_min=pressure_range[0] if use_pressure else None,
+                    pressure_max=pressure_range[1] if use_pressure else None,
+                    measurement_variable=variable, limit=500,
+                )
+            except ResearchError as exc:
+                st.error(str(exc))
+                matches = []
+            st.caption(f'{len(matches)} validated tests match · data origin: NASA_REPORT_EXTRACTED · Table IX subset')
+            if matches:
+                page_size = 50
+                total_pages = (len(matches) + page_size - 1) // page_size
+                page = st.number_input("Result page", min_value=1, max_value=total_pages, value=1)
+                visible = matches[(page - 1) * page_size:page * page_size]
+                def record_row(row):
+                    token = row["measurement_original"]
+                    status = ("Unavailable" if row["measurement_classification"] == "UNAVAILABLE"
+                              else "Approximate" if token.lstrip().startswith(("~", "≈"))
+                              else row["measurement_classification"].title())
+                    return {
+                        "Test ID": row["original_test_id"],
+                        "Fuel": row["fuel"],
+                        "O₂ fraction": row["oxygen_mole_fraction"],
+                        "Pressure (mmHg)": row["pressure_mmhg"],
+                        variable_names[variable]: (
+                            f"Unavailable ({token})" if row["measurement_classification"] == "UNAVAILABLE"
+                            else f'{token} {row["measurement_unit"]}'
+                        ),
+                        "Value status": status,
+                        "Outcome (reported)": row["test_end"],
+                        "PDF page": row["measurement_page"],
+                    }
+                table_rows = [record_row(row) for row in visible]
+                st.dataframe(pd.DataFrame(table_rows), hide_index=True, width="stretch")
+                if all(row["source_rights"] == "Public Use Permitted" for row in matches):
+                    st.download_button(
+                        "Download filtered measurements (CSV)",
+                        pd.DataFrame([record_row(row) for row in matches]).to_csv(index=False).encode("utf-8"),
+                        file_name="flex_verified_table_ix_subset.csv", mime="text/csv",
+                    )
+                    st.caption(f"CSV contains all {len(matches)} filtered, report-extracted records.")
+                html('<div class="section-title">Experiment detail</div>')
+                choices = {row["id"]: row["original_test_id"] for row in visible}
+                chosen = st.selectbox("Inspect a test", list(choices),
+                                      format_func=lambda key: choices[key])
+                experiment = store.experiment(chosen)
+                provenance = store.provenance(chosen)
+                a, b = st.columns([1.5, 1], gap="large")
+                with a:
+                    st.markdown(f'**{experiment["original_test_id"]} · {experiment["fuel"]}**')
+                    st.caption(f'Date {experiment["test_date"]} · GMT {experiment["gmt"]} · Reported outcome: {experiment["test_end"]}')
+                    measurement_rows = []
+                    for measure in experiment["measurements"]:
+                        token = measure["original_value"]
+                        status = ("Unavailable" if measure["classification"] == "UNAVAILABLE"
+                                  else "Approximate" if token.lstrip().startswith(("~", "≈"))
+                                  else measure["classification"].title())
+                        measurement_rows.append({
+                            "Field": variable_names[measure["variable"]],
+                            "Source value": token,
+                            "Original unit": measure["original_unit"],
+                            "Status": status,
+                            "Uncertainty": measure["uncertainty"] or "Not reported in Table IX",
+                            "PDF page": measure["page"],
+                        })
+                    st.dataframe(pd.DataFrame(measurement_rows), hide_index=True, width="stretch")
+                    st.caption("A source dash remains unavailable; no zero or estimate is inserted.")
+                with b:
+                    st.markdown("**Source provenance**")
+                    st.write(provenance["source_title"])
+                    st.caption(f'NASA report · PDF page {provenance["first_pdf_page"]} · printed page {provenance["first_pdf_page"] - 6} · Appendix A, Table IX')
+                    st.caption(f'Data origin: {provenance["data_origin"]} · Validation: {provenance["validation_status"]}')
+                    st.caption(f'Rights: {provenance["source_rights"]} · SHA-256: {provenance["source_sha256"]}')
+                    st.link_button("Open NASA source report", provenance["source_url"])
+            else:
+                st.info("No validated tests match these filters. Adjust the conditions or choose another investigation.")
+        else:
+            st.info(f'No validated numerical experiments are admitted for {investigation}. Documentary and catalogue coverage is separate.')
+            related = store.sources(investigation_id=investigation)
+            if related:
+                st.dataframe(pd.DataFrame([
+                    {"Source": item["title"], "Status": item["verification_status"],
+                     "Evidence": item["admission_status"], "URL": item["url"]}
+                    for item in related
+                ]), hide_index=True, width="stretch")
+
+        html('<div class="editor-head"><div class="section-title" style="margin:0">Read-only SQL</div><span class="smallcaps">APPROVED RESEARCH PROJECTION</span></div>')
+        st.caption("Available tables: experiment_records, measurement_records, source_records, research_passages, research_topics, research_domains.")
+        default_sql = "SELECT original_test_id, fuel, test_end FROM experiment_records LIMIT 20"
+        sql_text = st.text_area("SQL query", value=default_sql, height=125)
+        if st.button("Run read-only query"):
+            try:
+                st.session_state["sql_result"] = RestrictedSQL(store).execute(sql_text)
+                st.session_state["sql_text"] = sql_text
+                st.session_state.pop("sql_error", None)
+            except QueryRejected as exc:
+                st.session_state.pop("sql_result", None)
+                st.session_state["sql_error"] = str(exc)
+                st.session_state["sql_error_query"] = sql_text
+        if st.session_state.get("sql_error") and st.session_state.get("sql_error_query") == sql_text:
+            st.error(st.session_state["sql_error"])
+        result = st.session_state.get("sql_result")
+        if result is not None and st.session_state.get("sql_text") == sql_text:
+            st.dataframe(pd.DataFrame(result.rows, columns=result.columns), hide_index=True, width="stretch")
+            if result.truncated:
+                st.warning("Result truncated by the read-only SQL limit.")
+            if result.rows:
+                st.download_button(
+                    "Download approved SQL result (CSV)",
+                    pd.DataFrame(result.rows, columns=result.columns).to_csv(index=False).encode("utf-8"),
+                    file_name="research_query_result.csv", mime="text/csv",
+                )
 
 
 def compare():

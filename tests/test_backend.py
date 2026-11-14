@@ -37,6 +37,7 @@ def test_source_catalogue_and_provenance(store):
     assert store.source_evidence("PSI-99") == []
     assert all(s["domain_id"] == "detection" for s in store.sources(domain_id="detection"))
     assert len(store.sources(investigation_id="FLEX", admitted_only=True)) == 2
+    assert any(s["key"] == "PDF-2" for s in store.sources(investigation_id="FLEX", topic_id="oxygen"))
     first = store.experiments(limit=1)[0]
     provenance = store.provenance(first["id"])
     assert provenance["source_title"] == "20150023456.pdf"
@@ -55,11 +56,15 @@ def test_parameterized_filters_and_missing_data(store):
     assert len(flex) == 273
     assert store.experiments(investigation_id="BASS-II") == []
     methanol = store.experiments(fuel="Methanol", limit=500)
+    assert "Methanol" in store.fuels()
     assert methanol and all(row["fuel"] == "Methanol" for row in methanol)
     oxygen = store.experiments(oxygen_min=0.2, oxygen_max=0.21, limit=500)
     assert oxygen and all(0.2 <= row["oxygen_mole_fraction"] <= 0.21 for row in oxygen)
     assert store.experiments(test_query="%_") == []
     assert store.experiments(test_query="FLEX", limit=1, offset=1)[0]["id"] == flex[1]["id"]
+    selected = store.experiments(measurement_variable="burning_rate_mm2_s", limit=1)[0]
+    assert selected["measurement_unit"] == "mm²/s"
+    assert selected["measurement_page"] == 26
     with pytest.raises(ResearchError):
         store.experiments(oxygen_min=1.1)
     with pytest.raises(ResearchError):

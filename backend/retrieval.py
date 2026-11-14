@@ -106,6 +106,23 @@ def _source_map(store: ResearchStore) -> dict[str, dict]:
     return {item["url"]: item for item in store.sources(limit=100)}
 
 
+def _experiment_item(store: ResearchStore, experiment_id: str, *, illustrative: bool = False) -> dict:
+    experiment = store.experiment(experiment_id)
+    provenance = store.provenance(experiment_id)
+    context = ("Illustrative source record; not a representative sample. " if illustrative else "")
+    return {"kind": "experiment", "investigation_id": "FLEX",
+            "source_title": provenance["source_title"], "source_identifier": "NASA/TP-2015-216046",
+            "source_url": provenance["source_url"], "source_key": "PDF-2",
+            "verification_status": provenance["validation_status"],
+            "location": f'Appendix A, Table IX; PDF page {provenance["first_pdf_page"]}',
+            "experiment_id": experiment["original_test_id"],
+            "text": context + f'{experiment["fuel"]}; reported outcome {experiment["test_end"]}; date {experiment["test_date"]}.',
+            "measurements": [{"variable": m["variable"], "original_value": m["original_value"],
+                              "original_unit": m["original_unit"], "classification": m["classification"],
+                              "uncertainty": m["uncertainty"], "page": m["page"]}
+                             for m in experiment["measurements"]]}
+
+
 def retrieve_evidence(
     store: ResearchStore, question: str, *, domain_id: str | None = None,
     investigation_id: str | None = None, topic_id: str | None = None,
@@ -154,21 +171,18 @@ def retrieve_evidence(
             matching = [row for row in store.experiments(investigation_id="FLEX", test_query=suffix, limit=20)
                         if row["original_test_id"].endswith(suffix)]
             if matching:
-                experiment = store.experiment(matching[0]["id"])
-                provenance = store.provenance(experiment["id"])
-                items.append({"kind": "experiment", "investigation_id": "FLEX",
-                              "source_title": provenance["source_title"], "source_identifier": "NASA/TP-2015-216046",
-                              "source_url": provenance["source_url"], "source_key": "PDF-2",
-                              "verification_status": provenance["validation_status"],
-                              "location": f'Appendix A, Table IX; PDF page {provenance["first_pdf_page"]}',
-                              "experiment_id": experiment["original_test_id"],
-                              "text": f'{experiment["fuel"]}; reported outcome {experiment["test_end"]}; date {experiment["test_date"]}.',
-                              "measurements": [{"variable": m["variable"], "original_value": m["original_value"],
-                                                "original_unit": m["original_unit"], "classification": m["classification"],
-                                                "uncertainty": m["uncertainty"], "page": m["page"]}
-                                               for m in experiment["measurements"]]})
+                items.append(_experiment_item(store, matching[0]["id"]))
             else:
                 notices.append(f'FLEX test {suffix}: no validated record is present in the admitted subset.')
+        elif investigation == "FLEX" and "oxygen" in route["topics"] and re.search(r"outcome|affect|effect", question.casefold()):
+            # Show a few actual rows across the reported oxygen range. They are
+            # examples for inspection, not a causal or representative analysis.
+            rows = store.experiments(investigation_id="FLEX", measurement_variable="oxygen_mole_fraction", limit=500)
+            ordered = sorted(rows, key=lambda row: (row["measurement_numeric"], row["original_test_id"]))
+            indices = {0, len(ordered) // 2, len(ordered) - 1}
+            for index in sorted(indices):
+                items.append(_experiment_item(store, ordered[index]["id"], illustrative=True))
+            notices.append("FLEX examples span reported oxygen conditions; fuel and pressure may differ. They do not establish a causal effect. Use Compare & Analyze for filtered descriptive views.")
 
         if coverage["admitted_passages"] and not (investigation == "FLEX" and route["test_number"] is not None and not route["topics"]):
             hits = []
@@ -235,6 +249,8 @@ def retrieve_evidence(
                               "text": "No admitted source passage or numerical record is available for a factual summary.",
                               "measurements": []})
     admitted = [item for item in items if item["kind"] != "source_pointer"]
+    if set(scopes) == {"FLEX", "BASS-II"} and "burning_rate" in route["topics"]:
+        notices.append("FLEX reports a liquid-droplet burning-rate constant in mm²/s. BASS-II studies solid materials and has no admitted structured burning-rate values here; a numerical rate comparison is unavailable.")
     exact_test_missing = route["test_number"] is not None and not any(item["kind"] == "experiment" for item in items)
     if not admitted or exact_test_missing:
         notices.append("The current approved corpus cannot support a factual answer to this question.")

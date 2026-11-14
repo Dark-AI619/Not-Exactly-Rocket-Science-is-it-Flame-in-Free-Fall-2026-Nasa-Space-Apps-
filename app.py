@@ -50,7 +50,7 @@ def explorer():
         heading("NASA Space Apps Challenge 2026", "Flame in Freefall", "Explore the evidence behind combustion and fire safety in microgravity. A research workspace built around traceable sources, measured conditions, and clear scientific limits.")
         st.caption("Independent hackathon project by Not Exactly Rocket Science, Is It?! · NASA is a research source, not the operator or endorser of this app.")
     with right:
-        st.image(str(ASSET),use_container_width=True)
+        st.image(str(ASSET),width="stretch")
         st.markdown('<div class="hero-note">Supplied Space Apps Challenge artwork, shown in full to preserve its original lettering.</div>',unsafe_allow_html=True)
     st.divider()
     st.subheader("Find research")
@@ -109,7 +109,7 @@ def assistant():
 def effect():
     heading("Visual research preview", "View Effect", "A place to examine documented flame behavior and the conditions behind it.")
     notice("Interface preview · This image is artwork, not experimental footage or a flame simulation.")
-    st.image(str(ASSET),use_container_width=True)
+    st.image(str(ASSET),width="stretch")
     st.caption("Supplied Space Apps Challenge artwork. A separate flame-over-Earth asset was not supplied.")
     a,b=st.columns(2,gap="large")
     with a:
@@ -119,7 +119,7 @@ def effect():
         panel("Experimental conditions", "Fuel, atmosphere, gravity, airflow and apparatus will accompany each future visual.")
         panel("Evidence and limitations", "Authentic media, illustrations and model outputs will be labeled separately with sources and validation status.")
 
-st.sidebar.image(str(ASSET),use_container_width=True)
+st.sidebar.image(str(ASSET),width="stretch")
 st.sidebar.markdown("**FLAME IN FREEFALL**")
 st.sidebar.caption("Research interface · Phase 2 preview")
 pages=[st.Page(explorer,title="Research Explorer",icon="🔎",default=True),st.Page(records,title="Research Records",icon="📚"),st.Page(compare,title="Compare & Analyze",icon="📊"),st.Page(lab,title="Solution Lab",icon="🧪"),st.Page(assistant,title="AI Research Assistant",icon="💬"),st.Page(effect,title="View Effect",icon="🔥")]

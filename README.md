@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is being connected to verified research in staged Phase 3 checkpoints. Checkpoint 3C connects Research Explorer and Research Records on the development branch; charts, AI answers, and flame simulations are reserved for later checkpoints. No sample measurements are invented.
+An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is being connected to verified research in staged Phase 3 checkpoints. Checkpoint 3C connects Research Explorer and Research Records, and 3D adds descriptive FLEX comparisons on the development branch. AI answers and flame simulations are reserved for later checkpoints. No sample measurements are invented.
 
 ## Run locally
 
@@ -29,3 +29,7 @@ The standalone `backend` package provides read-only scientific data services, in
 ## Phase 3C research pages
 
 Research Explorer browses domains, investigations, topics, source records, and PDF passage hits. Research Records filters the admitted FLEX Table IX subset, displays original measured tokens and units, shows missing cells and source-page provenance, and permits bounded read-only queries with CSV export. See `research/PHASE3C_REPORT.md` for verification and limitations. These changes are committed to a development branch; Phase 3 does not publish new functionality to the public Streamlit demo.
+
+## Phase 3D scientific comparisons
+
+Compare & Analyze filters admitted FLEX tests by fuel, oxygen mole fraction, pressure and original test ID. It plots only pairs with both requested values, retains missing and source-classification status, shows original axis units, and includes a source-trace table. The scatter and fuel distribution are descriptive views of the selected subset; changing experimental conditions are flagged. See `research/PHASE3D_REPORT.md` for numerical checks and limits. Plotly is required in addition to the existing runtime packages.

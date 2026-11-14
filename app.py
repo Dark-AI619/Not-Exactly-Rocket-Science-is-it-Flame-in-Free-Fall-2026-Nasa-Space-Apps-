@@ -3,9 +3,10 @@
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
-from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, validate_database
+from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, build_comparison, validate_database
 
 ASSETS = Path(__file__).parent / "assets"
 ASTRONAUT = ASSETS / "space_apps_astronaut.jpg"
@@ -375,19 +376,154 @@ def records():
 
 
 def compare():
-    heading("02 / MEASUREMENT ANALYSIS", "Compare & Analyze", "A scientific comparison workspace designed to preserve measurement units and experimental context.")
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.selectbox("Reference experiment", ["Select a validated record"], disabled=True)
-    with right:
-        st.selectbox("Comparison experiment", ["Select a validated record"], disabled=True)
-    html('<div class="section-title">Measurement canvas</div>')
-    html('<div class="chart-frame"><div class="axis-y">Measured value · original unit</div><div class="chart-empty"><strong>No measurements plotted</strong>Validated source-linked records are required.</div><div class="axis-x">Experiment or condition</div></div>')
-    a, b = st.columns([1.35, 1], gap="large")
-    with a:
-        surface("COMPARISON", "Conditions side by side", "Fuel or material · atmosphere · pressure · apparatus · reported outcome.")
-    with b:
-        surface("INTERPRETATION", "Compatibility check", "Missing fields, differing methods, and reported uncertainty will be visible before comparison.", "orange")
+    heading("02 / MEASUREMENT ANALYSIS", "Compare & Analyze",
+            "Explore descriptive relationships within the validated FLEX report subset. Every plotted point traces to an original test and PDF page.")
+    try:
+        store = ResearchStore()
+        validate_database(store)
+    except (OSError, ResearchError, ValueError) as exc:
+        st.error(f"Verified research database unavailable: {exc}")
+        st.stop()
+    with store:
+        st.caption("Scope: FLEX · NASA/TP-2015-216046 Appendix A, Table IX · NASA_REPORT_EXTRACTED · historical report values, not live telemetry")
+        labels = {
+            "pressure_mmhg": "Atmospheric pressure",
+            "oxygen_mole_fraction": "Oxygen mole fraction",
+            "nitrogen_mole_fraction": "Nitrogen mole fraction",
+            "carbon_dioxide_mole_fraction": "Carbon dioxide mole fraction",
+            "helium_mole_fraction": "Helium mole fraction",
+            "initial_diameter_mm": "Initial droplet diameter",
+            "visible_extinction_diameter_mm": "Visible extinction diameter",
+            "burning_rate_mm2_s": "Burning-rate constant",
+            "burn_time_s": "Burn duration",
+        }
+        conditions, axes = st.columns([1, 1], gap="large")
+        with conditions:
+            html('<div class="section-title">Experimental conditions</div>')
+            fuel = st.selectbox("Fuel", ["All fuels", *store.fuels()])
+            use_oxygen = st.checkbox("Limit oxygen mole fraction", key="compare_oxygen_on")
+            oxygen_range = st.slider("O₂ mole fraction", 0.0, 1.0, (0.12, 0.34), 0.01,
+                                     disabled=not use_oxygen, key="compare_oxygen")
+            use_pressure = st.checkbox("Limit pressure", key="compare_pressure_on")
+            pressure_range = st.slider("Atmospheric pressure · mmHg", 0.0, 2400.0,
+                                       (500.0, 2350.0), 10.0, disabled=not use_pressure,
+                                       key="compare_pressure")
+        with axes:
+            html('<div class="section-title">Measurement axes</div>')
+            x_var = st.selectbox("Horizontal measurement", list(labels),
+                                 index=list(labels).index("initial_diameter_mm"),
+                                 format_func=lambda key: labels[key])
+            y_var = st.selectbox("Vertical measurement", list(labels),
+                                 index=list(labels).index("burn_time_s"),
+                                 format_func=lambda key: labels[key])
+            st.caption("Axis units are the original report units. Missing cells are excluded from plots and counted below.")
+        available = store.experiments(
+            investigation_id="FLEX", fuel=None if fuel == "All fuels" else fuel,
+            oxygen_min=oxygen_range[0] if use_oxygen else None,
+            oxygen_max=oxygen_range[1] if use_oxygen else None,
+            pressure_min=pressure_range[0] if use_pressure else None,
+            pressure_max=pressure_range[1] if use_pressure else None, limit=500,
+        )
+        names = {row["id"]: row["original_test_id"] for row in available}
+        selected = st.multiselect("Limit to specific FLEX tests (optional)", list(names),
+                                  format_func=lambda key: names[key],
+                                  placeholder="All matching validated tests")
+        if x_var == y_var:
+            st.info("Choose different measurements for the horizontal and vertical axes.")
+            return
+        try:
+            comparison = build_comparison(
+                store, x_var, y_var, fuel=None if fuel == "All fuels" else fuel,
+                oxygen_range=oxygen_range if use_oxygen else None,
+                pressure_range=pressure_range if use_pressure else None,
+                experiment_ids=selected or None,
+            )
+        except ResearchError as exc:
+            st.error(str(exc))
+            return
+        if comparison.rows.empty:
+            st.info("No validated FLEX tests match these conditions.")
+            return
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Selected tests", len(comparison.rows))
+        m2.metric("Plotted pairs", len(comparison.plotted))
+        m3.metric("Missing either axis", comparison.missing_either)
+        st.caption(f"Unavailable horizontal values: {comparison.missing_x} · unavailable vertical values: {comparison.missing_y}. A pair missing both is counted once in the plot exclusion.")
+        html('<div class="section-title">Measurement relationship</div>')
+        if comparison.plotted.empty:
+            st.info("No selected test has both measurements available, so no chart is drawn.")
+        else:
+            plot = comparison.plotted.copy()
+            plot["x_status"] = plot["x_classification"]
+            plot["y_status"] = plot["y_classification"]
+            figure = px.scatter(
+                plot, x="x_numeric_value", y="y_numeric_value", color="fuel",
+                symbol="test_end", color_discrete_sequence=["#72dce2", "#f2a16e", "#9ca9ff", "#b5dc8c"],
+                hover_name="original_test_id",
+                hover_data={"fuel": True, "test_end": True, "oxygen_mole_fraction": ":.3f",
+                            "pressure_mmhg": ":.1f", "x_original_value": True,
+                            "y_original_value": True, "x_status": True, "y_status": True,
+                            "x_page": True, "y_page": True,
+                            "x_numeric_value": False, "y_numeric_value": False},
+                labels={"x_numeric_value": f"{labels[x_var]} ({comparison.x_unit})",
+                        "y_numeric_value": f"{labels[y_var]} ({comparison.y_unit})",
+                        "fuel": "Fuel", "test_end": "Reported outcome",
+                        "oxygen_mole_fraction": "O₂ mole fraction",
+                        "pressure_mmhg": "Pressure (mmHg)",
+                        "x_original_value": "Original X token", "y_original_value": "Original Y token",
+                        "x_status": "X classification", "y_status": "Y classification",
+                        "x_page": "X PDF page", "y_page": "Y PDF page"},
+            )
+            figure.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+                                 font_color="#dbe9ec", legend_title_text="Fuel / reported outcome",
+                                 margin=dict(l=20, r=20, t=25, b=20), height=500)
+            figure.update_xaxes(gridcolor="#304750", zerolinecolor="#405660")
+            figure.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
+            st.plotly_chart(figure, width="stretch")
+            st.caption("Descriptive scatter of reported values only. Colour groups fuels; symbols show the report's test outcome. No causal fit or prediction is implied.")
+
+            html('<div class="section-title">Distribution by fuel</div>')
+            distribution = px.box(plot, x="fuel", y="y_numeric_value", color="fuel",
+                                  color_discrete_sequence=["#72dce2", "#f2a16e", "#9ca9ff", "#b5dc8c"],
+                                  labels={"fuel": "Fuel", "y_numeric_value": f"{labels[y_var]} ({comparison.y_unit})"})
+            distribution.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+                                       font_color="#dbe9ec", showlegend=False,
+                                       margin=dict(l=20, r=20, t=25, b=20), height=340)
+            distribution.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
+            st.plotly_chart(distribution, width="stretch")
+            st.caption("Box summaries are calculated from the plotted subset with Pandas and Plotly; they are not values printed in the NASA report.")
+
+        html('<div class="section-title">Comparability and limits</div>')
+        differences = []
+        if len(comparison.fuels) > 1:
+            differences.append(f"Fuels differ: {', '.join(comparison.fuels)}.")
+        if comparison.oxygen_span and comparison.oxygen_span[0] != comparison.oxygen_span[1]:
+            differences.append(f"O₂ mole fraction ranges from {comparison.oxygen_span[0]:.3f} to {comparison.oxygen_span[1]:.3f}.")
+        if comparison.pressure_span and comparison.pressure_span[0] != comparison.pressure_span[1]:
+            differences.append(f"Pressure ranges from {comparison.pressure_span[0]:.1f} to {comparison.pressure_span[1]:.1f} mmHg.")
+        if differences:
+            st.warning("Selected tests differ in experimental conditions. " + " ".join(differences)
+                       + " Inspect individual tests before drawing scientific conclusions.")
+        else:
+            st.info("Fuel, oxygen fraction and pressure are uniform in this selection; other experimental differences may remain.")
+        st.caption("MEASURED and DERIVED are the transcription's source classifications. No uncertainty is displayed as an error bar unless the report supplies a numerical uncertainty for that cell.")
+
+        html('<div class="section-title">Trace every point</div>')
+        trace = comparison.rows[["original_test_id", "fuel", "test_end", "oxygen_mole_fraction",
+                                 "pressure_mmhg", "x_original_value", "x_original_unit",
+                                 "x_classification", "x_uncertainty", "x_page",
+                                 "y_original_value", "y_original_unit", "y_classification",
+                                 "y_uncertainty", "y_page", "source_title", "source_url"]].copy()
+        trace.columns = ["Test ID", "Fuel", "Reported outcome", "O₂ fraction", "Pressure (mmHg)",
+                         "Horizontal source value", "Horizontal unit", "Horizontal status",
+                         "Horizontal uncertainty", "Horizontal PDF page", "Vertical source value",
+                         "Vertical unit", "Vertical status", "Vertical uncertainty",
+                         "Vertical PDF page", "NASA report", "Source URL"]
+        trace = trace.fillna({"Horizontal uncertainty": "Not reported", "Vertical uncertainty": "Not reported"})
+        st.dataframe(trace, hide_index=True, width="stretch")
+        st.link_button("Open NASA report", comparison.rows.iloc[0]["source_url"])
+        st.caption("A dash in an original value remains unavailable. Each row preserves its original token, unit, classification and PDF page.")
 
 
 def lab():

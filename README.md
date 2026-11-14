@@ -17,3 +17,7 @@ The project owner supplied two images. The astronaut and NASA International Spac
 ## AI assistance
 
 ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2 code and design. Generated Python files carry the required co-author comment. The application has no active AI features in this milestone.
+
+## Phase 3A research audit
+
+The research catalogue migration and audit are documented in `research/PHASE3A_REPORT.md`. The repository includes a compressed, topic-indexed copy of the validated Phase 1 database at `data/flame_research.db.gz`. This checkpoint prepares source classifications; it does not connect the database to the Streamlit pages. Milestone 3B is pending approval.

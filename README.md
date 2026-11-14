@@ -45,3 +45,7 @@ The full local integration audit is documented in `research/PHASE3F_READINESS.md
 ## Phase 4A optional Groq configuration
 
 The official Groq SDK is an optional generation boundary in `backend/groq_adapter.py`. No model call is wired into the dashboard yet. The existing deterministic evidence mode works with no API key. Copy `.env.example` values into private environment variables or `.streamlit/secrets.toml` (never commit that file). `GROQ_API_KEY` is the only secret. `GROQ_MODEL` defaults to `qwen/qwen3.8-27b`; confirm that the chosen model is still available on the owner's free-tier account before any live request. `GROQ_MAX_OUTPUT_TOKENS`, `GROQ_REQUEST_TIMEOUT` and `AI_SESSION_REQUEST_LIMIT` have bounded defaults. See `research/PHASE4A_REPORT.md` for the offline mock results and limits.
+
+## Phase 4B grounded answer service
+
+`backend/grounded.py` takes the existing category-routed evidence packet, supplies at most six admitted items within an 11,000-character context, and requests short citation-tagged JSON claims through the optional Groq adapter. It checks citation IDs, source vocabulary and numbers against cited evidence before exposing any generated claim. Unsupported answers and provider failures return the original deterministic packet. This backend service is not yet connected to the Streamlit interface; see `research/PHASE4B_REPORT.md` for offline tests and the limits of heuristic claim verification.

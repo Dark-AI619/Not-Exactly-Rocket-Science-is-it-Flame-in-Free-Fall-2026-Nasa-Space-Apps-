@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is being connected to verified research in staged Phase 3 checkpoints. Checkpoint 3C connects Research Explorer and Research Records, and 3D adds descriptive FLEX comparisons on the development branch. AI answers and flame simulations are reserved for later checkpoints. No sample measurements are invented.
+An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is being connected to verified research in staged Phase 3 checkpoints. Checkpoint 3C connects Research Explorer and Research Records; 3D adds descriptive FLEX comparisons; 3E adds deterministic, cited evidence retrieval in Assistant, Solution Lab and View Effect. No language model or physical simulation is connected. No sample measurements are invented.
 
 ## Run locally
 
@@ -16,7 +16,7 @@ The project owner supplied two images. The astronaut and NASA International Spac
 
 ## AI assistance
 
-ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2 and 3 code and design. Generated Python files carry the required co-author comment. The application has no active AI answers in this milestone.
+ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2 and 3 code and design. Generated Python files carry the required co-author comment. The Assistant offers deterministic source retrieval, not LLM-generated answers.
 
 ## Phase 3A research audit
 
@@ -33,3 +33,7 @@ Research Explorer browses domains, investigations, topics, source records, and P
 ## Phase 3D scientific comparisons
 
 Compare & Analyze filters admitted FLEX tests by fuel, oxygen mole fraction, pressure and original test ID. It plots only pairs with both requested values, retains missing and source-classification status, shows original axis units, and includes a source-trace table. The scatter and fuel distribution are descriptive views of the selected subset; changing experimental conditions are flagged. See `research/PHASE3D_REPORT.md` for numerical checks and limits. Plotly is required in addition to the existing runtime packages.
+
+## Phase 3E evidence retrieval
+
+`backend/retrieval.py` routes a question by intent, domain, investigation aliases and topic synonyms, then retrieves a bounded set of indexed PDF passages, approved objective summaries or exact validated FLEX test measurements. Assistant shows the deterministic evidence packet and exact citations; Solution Lab separates source observations from design questions; View Effect keeps conceptual artwork distinct from verified test conditions. See `research/PHASE3E_REPORT.md` for tests and limitations, and `research/ADMISSION_ARCHITECTURE.md` for the future reviewed-source workflow. No public Add Research control or unattended source admission is enabled.

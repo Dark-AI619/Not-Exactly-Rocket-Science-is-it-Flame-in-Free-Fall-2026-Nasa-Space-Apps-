@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, build_comparison, validate_database
+from backend import QueryRejected, ResearchError, ResearchStore, RestrictedSQL, build_comparison, retrieve_evidence, validate_database
 
 ASSETS = Path(__file__).parent / "assets"
 ASTRONAUT = ASSETS / "space_apps_astronaut.jpg"
@@ -526,52 +526,147 @@ def compare():
         st.caption("A dash in an original value remains unavailable. Each row preserves its original token, unit, classification and PDF page.")
 
 
+@st.cache_data(show_spinner=False, max_entries=64)
+def cached_evidence(question, investigation=None, domain=None, topic=None):
+    with ResearchStore() as store:
+        return retrieve_evidence(store, question, investigation_id=investigation,
+                                 domain_id=domain, topic_id=topic)
+
+
+def evidence_summary(packet):
+    route = packet["route"]
+    st.caption(f'DETERMINISTIC EVIDENCE SUMMARY · {route["domain"].upper()} · {route["intent"].upper()} · not an LLM-generated answer')
+    if packet["supported"]:
+        count = sum(item["kind"] != "source_pointer" for item in packet["items"])
+        st.write(f"Found {count} admitted evidence item(s) in the selected scope. Read the source excerpts and original measurements below; they are not a causal conclusion.")
+    for note in packet["notices"]:
+        st.warning(note)
+    for expansion in packet["expansions"]:
+        st.caption("Scope expansion: " + expansion)
+    if packet["scopes"]:
+        st.caption("Investigations searched separately: " + ", ".join(packet["scopes"]))
+
+
+def evidence_items(packet, *, compact=False):
+    for index, item in enumerate(packet["items"], 1):
+        title = f'{index}. {item["source_title"]} · {item["location"]}'
+        with st.expander(title, expanded=not compact and index == 1):
+            st.caption(f'{item["kind"].replace("_", " ").title()} · Identifier: {item["source_identifier"]} · Investigation: {item["investigation_id"] or "none"} · Verification: {item["verification_status"]}')
+            if item["experiment_id"]:
+                st.write(f'Original test: **{item["experiment_id"]}**')
+            st.write(item["text"])
+            if item["measurements"]:
+                st.dataframe(pd.DataFrame([{
+                    "Field": m["variable"], "Original value": m["original_value"],
+                    "Original unit": m["original_unit"], "Classification": m["classification"],
+                    "Uncertainty": m["uncertainty"] or "Not reported", "PDF page": m["page"],
+                } for m in item["measurements"]]), hide_index=True, width="stretch")
+            st.link_button("Open original NASA source", item["source_url"])
+
+
 def lab():
-    heading("03 / ENGINEERING RESEARCH", "Solution Lab", "Frame a fire-safety problem, gather relevant evidence, and document design considerations.")
+    heading("03 / ENGINEERING RESEARCH", "Solution Lab",
+            "Frame a fire-safety research question and inspect admitted evidence before recording design considerations.")
     question, context = st.columns([1.5, 1], gap="large")
     with question:
         html('<div class="step">01 / DEFINE THE PROBLEM</div>')
-        st.text_area("Research question", placeholder="Describe the system, hazard, or design question…", height=160, disabled=True)
+        problem = st.text_area("Research problem", placeholder="Example: What evidence informs oxygen-sensitive flame extinction in FLEX?", height=145)
     with context:
         html('<div class="step">02 / SET THE CONTEXT</div>')
-        st.selectbox("Investigation focus", ["Choose a research area"], disabled=True)
-        st.selectbox("Environment", ["Choose experimental conditions"], disabled=True)
-    evidence, considerations = st.columns(2, gap="large")
-    with evidence:
-        html('<div class="step">03 / REVIEW EVIDENCE</div>')
-        surface("SOURCE-BOUND", "Supporting research", "Source passages, experiment identifiers, conditions, and applicability limits will appear here.")
-    with considerations:
-        html('<div class="step">04 / DOCUMENT REASONING</div>')
-        surface("DESIGN NOTES", "Engineering considerations", "Record assumptions, tradeoffs, open questions, and further tests needed.", "orange")
+        investigation = st.selectbox("Investigation focus", [None, "FLEX", "BASS-II", "SAFFIRE", "SAME", "SPICE"],
+                                     format_func=lambda key: key or "Route from question")
+        st.caption("Only approved passages, objective summaries and validated records are retrieved.")
+    if st.button("Gather research evidence", type="primary"):
+        try:
+            st.session_state["lab_packet"] = cached_evidence(problem, investigation=investigation)
+            st.session_state["lab_question"] = problem
+        except (ResearchError, OSError) as exc:
+            st.error(str(exc))
+    packet = st.session_state.get("lab_packet")
+    if packet is not None:
+        evidence, considerations = st.columns([1.5, 1], gap="large")
+        with evidence:
+            html('<div class="step">03 / REVIEW EVIDENCE</div>')
+            evidence_summary(packet)
+            evidence_items(packet, compact=True)
+        with considerations:
+            html('<div class="step">04 / DESIGN CONSIDERATIONS</div>')
+            st.info("Research prompts, not experimental findings or a certified design:")
+            st.markdown("- Check whether the source fuel, atmosphere, pressure and apparatus match the proposed use.\n- Identify unmeasured conditions and missing records.\n- Plan independent engineering review and further testing before any safety decision.")
+            st.caption("Problem entered: " + st.session_state.get("lab_question", ""))
+    else:
+        st.caption("Enter a problem to retrieve source-linked evidence. No engineering solution is generated automatically.")
     st.caption("This research workspace does not certify spacecraft safety decisions.")
 
 
 def assistant():
-    heading("04 / EVIDENCE-LED DIALOGUE", "AI Research Assistant", "A conversation workspace for questions that require traceable research support.")
-    conversation, evidence = st.columns([1.65, 1], gap="large")
+    heading("04 / EVIDENCE-LED DIALOGUE", "AI Research Assistant",
+            "Ask research questions and inspect a deterministic, cited evidence summary from the approved corpus.")
+    st.info("Local evidence mode is active. No language model or paid API is connected; results are retrieved source records, not generated scientific answers.")
+    conversation, evidence = st.columns([1.35, 1], gap="large")
     with conversation:
         html('<div class="section-title" style="margin-top:0">Conversation</div>')
-        html('<div class="chat-window"><div class="chat-msg"><small>RESEARCH ASSISTANT · PREVIEW</small>When source retrieval is connected, ask about an investigation or measurement. Answers will distinguish reported findings from interpretation.</div></div>')
-        html('<div class="composer">Ask a question about microgravity combustion… <span>↗</span></div>')
-        st.caption("Message submission is unavailable until evidence retrieval is validated.")
+        if "research_chat" not in st.session_state:
+            st.session_state["research_chat"] = []
+        for message in st.session_state["research_chat"][-8:]:
+            with st.chat_message(message["role"]):
+                if message["role"] == "user":
+                    st.write(message["text"])
+                else:
+                    evidence_summary(message["packet"])
+                    st.caption("Open the evidence inspector for the exact source passages and measurement cells.")
+        prompt = st.text_input("Research question", placeholder="Ask about FLEX, BASS-II, smoke detection, or a specific test")
+        with ResearchStore() as store:
+            topic_labels = {row["id"]: row["label"] for row in store.topics()}
+        scope_col, topic_col = st.columns(2, gap="small")
+        with scope_col:
+            scope = st.selectbox("Investigation scope", [None, "FLEX", "BASS-II", "SAFFIRE", "SAME", "SPICE"],
+                                 format_func=lambda key: key or "Route from question")
+        with topic_col:
+            topic = st.selectbox("Topic scope", [None, *topic_labels],
+                                 format_func=lambda key: topic_labels.get(key, "Route from question"))
+        if st.button("Retrieve evidence", type="primary"):
+            try:
+                packet = cached_evidence(prompt, investigation=scope, topic=topic)
+                st.session_state["research_chat"].extend([
+                    {"role": "user", "text": prompt}, {"role": "assistant", "packet": packet},
+                ])
+                st.rerun()
+            except (ResearchError, OSError) as exc:
+                st.error(str(exc))
     with evidence:
         html('<div class="section-title" style="margin-top:0">Evidence inspector</div>')
-        surface("CLAIM TRACE", "No claim selected", "Select a cited statement to inspect the source passage and its scientific context.")
-        html('<div class="section-title">Source citations</div>')
-        html('<div class="surface"><span class="smallcaps">CITATION REGISTER</span><h3>No citations yet</h3><p>Document, page, and test identifiers will accompany supported answers.</p></div>')
+        latest = next((m["packet"] for m in reversed(st.session_state.get("research_chat", []))
+                       if m["role"] == "assistant"), None)
+        if latest:
+            evidence_items(latest, compact=True)
+        else:
+            st.caption("Ask a question to see source citations, PDF pages and original measurements here.")
 
 
 def effect():
     heading("05 / VISUAL CONTEXT", "View Effect", "Examine the visual idea of a flame above Earth while keeping artwork separate from experimental evidence.")
     html(f'<div class="effect-stage"><div class="effect-art"><img src="data:image/png;base64,{flame_data}" alt="Flame suspended above the curve of Earth"></div><div class="effect-label">Supplied flame-over-Earth artwork · conceptual visual, not experimental footage</div></div>')
     control, context = st.columns([1, 1.3], gap="large")
-    with control:
-        html('<div class="section-title" style="margin-top:0">Scene controls</div>')
-        st.selectbox("Research-backed preset", ["Available after source validation"], disabled=True)
-        st.caption("No simulation or experimental measurements are shown.")
-    with context:
-        html('<div class="section-title" style="margin-top:0">Evidence context</div>')
-        surface("VISUAL STATUS", "Illustration", "Future research views will identify their fuel, atmosphere, gravity, apparatus, original media source, and limitations.", "orange")
+    try:
+        with ResearchStore() as store:
+            tests = store.experiments(investigation_id="FLEX", limit=500)
+            by_id = {row["id"]: row for row in tests}
+            with control:
+                html('<div class="section-title" style="margin-top:0">Verified test context</div>')
+                chosen = st.selectbox("Inspect a FLEX test", list(by_id),
+                                      format_func=lambda key: by_id[key]["original_test_id"])
+                row = by_id[chosen]
+                st.write(f'**{row["original_test_id"]} · {row["fuel"]}**')
+                st.caption(f'O₂ mole fraction {row["oxygen_mole_fraction"]} · pressure {row["pressure_mmhg"]} mmHg · reported outcome {row["test_end"]}')
+                st.link_button("NASA report and source record", row["source_url"])
+            with context:
+                html('<div class="section-title" style="margin-top:0">Research evidence</div>')
+                packet = cached_evidence("FLEX flame extinction")
+                evidence_items({**packet, "items": packet["items"][:2]}, compact=True)
+                st.caption("The artwork does not depict the selected test. No authentic experimental footage is admitted to this view; no simulation is calculated.")
+    except (OSError, ResearchError, ValueError) as exc:
+        st.error(f"Research context unavailable: {exc}")
 
 
 import base64

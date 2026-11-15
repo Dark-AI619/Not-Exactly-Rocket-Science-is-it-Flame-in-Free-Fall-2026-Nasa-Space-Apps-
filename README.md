@@ -1,79 +1,169 @@
-# Flame in Freefall
+<div align="center">
 
-An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface connects verified FLEX report records, descriptive comparisons, source retrieval, optional source-checked Groq explanations, and a bounded D-squared droplet model. The model is a teaching approximation, separate from NASA observations. The public deployment remains on the earlier Phase 3B version; the Phase 5 release candidate is on `phase3-integration`.
+# 🔥 Flame in Freefall
+
+### Explore how fire behaves when gravity lets go.
+
+**NASA research → traceable experiments → scientific insight**
+
+An independent NASA Space Apps Challenge 2026 project<br>
+**Team: Not Exactly Rocket Science, Is It?!**
+
+![Space Apps astronaut artwork](assets/space_apps_astronaut.jpg)
+
+[Explore the science](#the-science-we-can-support) · [Judge journey](#a-three-minute-judge-journey) · [Run the app](#run-locally) · [Source and verification](#evidence-you-can-inspect)
+
+</div>
+
+---
+
+## Why this matters
+
+Fire safety in space begins with understanding combustion under unfamiliar conditions. NASA's investigations contain valuable evidence, but report tables, experiment identifiers, missing measurements, and technical terminology can make that evidence difficult to explore.
+
+**Flame in Freefall turns a verified subset of NASA research into one connected investigation:** discover a test, inspect its measurements, compare reported relationships, ask a source-grounded question, explore engineering considerations, and interact with a clearly bounded mathematical model.
+
+## One investigation. Six connected workspaces.
+
+| Workspace | What a visitor can do |
+| --- | --- |
+| **Research Explorer** | Discover investigations, scientific topics, and source records; begin with a verified FLEX example. |
+| **Research Records** | Filter actual report-extracted tests, inspect original values and units, follow provenance, and run restricted read-only SQL. |
+| **Compare & Analyze** | Plot descriptive relationships with original axis units, missing-value counts, and traceable experiment records. |
+| **AI Research Assistant** | Ask a research question, inspect retrieved evidence, and view optional citation-checked Groq explanations. |
+| **Solution Lab** | Connect a research question to supporting observations and conditional engineering considerations. |
+| **View Effect** | Load compatible report parameters or illustrative inputs into a D-squared droplet model, then play, pause, and reset its calculated trajectory. |
+
+The selected experiment and relevant question travel between workspaces through session context.
+
+## A three-minute judge journey
+
+1. Open **Research Explorer** and select **Start with a verified FLEX experiment**.
+2. Inspect **FLEX–054** in Research Records: original measurement tokens, missing cells, and the NASA report citation remain accessible.
+3. Select **Compare values** to see its initial diameter and reported burn duration with units.
+4. Select **Ask about this test**, submit the question, and expand the evidence citation.
+5. Continue to **Explore solutions** to examine the supporting research.
+6. Select **Open droplet model**, load the compatible D₀ and K values, and press **Play**.
+
+The reported burn duration and calculated model endpoint appear separately, so visitors can see where observation ends and mathematical interpretation begins.
+
+## The science we can support
+
+| Verified corpus | Included scope |
+| --- | ---: |
+| FLEX report-extracted tests | **273** |
+| Original measurement cells, including unavailable-value markers | **2,457** |
+| Searchable PDF page passages | **329** |
+| Source-linked documentary notes | **10** |
+| Catalogued sources | **25** |
+
+The numerical dataset is a validated transcription subset of **NASA/TP-2015-216046**, Appendix A, Table IX. Original units, printed values, page references, missing values, and data classifications are preserved.
+
+These records are classified **NASA_REPORT_EXTRACTED**. They are a subset of the report's experiments; original NASA PSI telemetry has not been acquired. BASS-II, SAME, and Saffire provide research context, with no admitted numerical experiment rows in this release.
+
+### A model with visible boundaries
+
+```text
+D(t)² = D₀² − Kt
+
+D₀: initial liquid-droplet diameter [mm]
+K:  constant burning-rate parameter [mm²/s]
+t:  model elapsed time [s]
+```
+
+Python calculates the diameter curve and drives the schematic object's size. The warm core and halo are **schematic flame visualization**, not an experimentally observed flame image or a prediction of flame geometry.
+
+The model assumes constant K. NASA's reported D₀ and fitted K use different time references, so loading source values produces a teaching approximation. It does not predict flame extinction, oxygen effects, or spacecraft safety. Compatible source loading is available for **258 of the 273** admitted tests; other records retain a clear explanation and illustrative mode.
+
+<div align="center">
+
+![Conceptual flame above Earth](assets/flame_over_earth.png)
+
+*Supplied conceptual artwork — not experimental footage.*
+
+</div>
+
+## Evidence you can inspect
+
+Every scientific view keeps its evidence close:
+
+- Original test identifiers, units, measurement classifications, and report pages.
+- Missing values shown explicitly and excluded from chart pairs where needed.
+- Separate source observations, calculated model values, and engineering interpretations.
+- Bounded SQLite FTS5 retrieval with inspectable citations.
+- Optional AI output checked against retrieved citation IDs and numerical tokens.
+
+Citation checks are heuristic; visitors should inspect the underlying sources. Without a Groq key, the app remains usable in deterministic evidence mode. **No authenticated live Groq call has been verified in this project session.**
+
+Primary scientific references:
+
+- [NASA FLEX detailed-results report](https://ntrs.nasa.gov/citations/20150023456)
+- [NASA technical reference supporting the D-squared model](https://ntrs.nasa.gov/citations/19820015544)
+- [NASA PSI FLEX investigation](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69)
+
+## Built for transparent scientific exploration
+
+**Python 3.12 · Streamlit · SQLite FTS5 · Pandas · NumPy · Plotly · optional Groq**
+
+The database is opened read-only. Restricted SQL uses approved projections, row and execution limits, and an SQLite authorizer. Simulation outputs are never written into the verified corpus.
+
+```text
+app.py                  Six connected research workspaces
+backend/                Data access, analysis, retrieval, AI checks, simulation
+data/                   Compressed verified SQLite corpus
+assets/                 Supplied astronaut and flame artwork
+tests/                  Scientific and service verification
+research/               Source admission and checkpoint reports
+```
 
 ## Run locally
 
-Use Python 3.12. Install `requirements.txt`, then run `streamlit run app.py`. No API key is required.
-
-For a clean checkout:
+Use Python 3.12 and check out **phase3-integration**:
 
 ```sh
+git clone --branch phase3-integration https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-.git
+cd Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-
 python -m venv .venv
+```
+
+Activate the environment, then:
+
+```sh
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-The app reads `data/flame_research.db.gz` and both images in `assets/` relative to the repository. The database is opened with SQLite `query_only=ON`; ordinary visitors cannot change it. The local health endpoint is `/_stcore/health`.
+No API key is required for evidence mode. For optional generation, the owner can configure `GROQ_API_KEY` privately in Streamlit secrets or environment variables. Non-secret controls are documented in [.env.example](.env.example). Never commit a key. The per-session request budget does not cap aggregate usage across public visitors.
 
-## Release candidate and free-tier limits
+### Owner deployment
 
-The Phase 4E release candidate is on `phase3-integration`. It has **not** been merged into `main` or deployed. See `research/PHASE4E_REPORT.md` for the local checks and manual deployment checklist.
+Deploy from **branch `phase3-integration`**, entry point **`app.py`**, using Python 3.12. The required database and artwork are committed. The default `main` branch contains an earlier preview and does not contain this completed simulation.
 
-The app works in evidence-only mode without secrets. An owner may set `GROQ_API_KEY` privately for optional generation. The non-secret settings in `.env.example` control model, maximum output tokens, timeout and per-session request limit. Do not commit `.env`, `.streamlit/secrets.toml`, or a live key. The per-session limit cannot protect one shared free quota from many separate visitors; public launch would need a separate global budget or abuse-control service. Free inference availability and model access can change. No paid billing is required or enabled by this repository.
+Deployment and final live Groq verification remain owner-controlled. A previously published demo may show the earlier preview until the owner redeploys.
 
-Phase 5 Pass A adds a connected path from a verified FLEX test through its measurements, descriptive comparison, source-linked question, Solution Lab, and test-aware visual context. See `research/PHASE5A_REPORT.md` for that checkpoint's local browser journey.
+## Verification
 
-Phase 5 Pass B adds a limited D-squared liquid-droplet model to View Effect. Visitors can play, pause, and reset a calculated diameter curve with illustrative sliders or load compatible, validated FLEX D₀ and K values. Report outcomes and burn durations remain separate from calculated values. See `research/PHASE5B_REPORT.md` for scientific assumptions, source checks, and browser verification. Pass C's final browser journey, responsive review, and release checks are in `research/PHASE5C_REPORT.md`.
+The Phase 5 acceptance run passed **70 automated tests**, compilation, database validation, and a local browser journey across all six workspaces. The final visual pass passed **17 targeted simulation tests** and local inspection of Explorer, Assistant, comparison charts, and the shrinking schematic droplet.
 
-## Research status
+```sh
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+```
 
-Phase 1 produced a separately preserved, validated transcription subset of FLEX Table IX from [NASA/TP-2015-216046](https://ntrs.nasa.gov/citations/20150023456). Checkpoint 3C reads that subset: 273 validated report-extracted tests and 2,457 original measurement cells. The catalogue now includes 329 searchable PDF page passages, 10 short source-linked documentary notes and 25 sources. BASS-II, SAME-R, and Saffire have no admitted numerical experiment rows. NASA PSI investigation pages are research sources, including [FLEX PSI-69](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69). Original units, source pages, rights, and uncertainty are retained.
+[Final acceptance report](research/PHASE5C_REPORT.md) · [Model assumptions and verification](research/PHASE5B_REPORT.md) · [Source admission architecture](research/ADMISSION_ARCHITECTURE.md)
 
-## Artwork and attribution
+## Team, attribution, and responsible use
 
-The project owner supplied two images. The astronaut and NASA International Space Apps Challenge artwork appears only in the Research Explorer hero, with its branding preserved. The flame-over-Earth artwork appears in View Effect as a conceptual illustration, not experimental footage. Their use does not imply that NASA operates or endorses this independent dashboard.
+Created by **Not Exactly Rocket Science, Is It?!** for NASA Space Apps Challenge 2026. This is an independent project; NASA does not operate or endorse the dashboard.
 
-## AI assistance
+NASA sources are linked through the research catalogue with recorded provenance and rights status. The owner supplied the astronaut/Space Apps and flame-over-Earth artworks; their inclusion does not grant downstream reuse rights. Source-specific rights must be checked before redistribution.
 
-ChatGPT/Codex assisted with Phase 1 data preparation and Phase 2–4 code and design. Generated Python files carry the required co-author comment. Without an owner-configured Groq key, Assistant and Solution Lab provide deterministic source retrieval; no visitor key is requested.
+ChatGPT/Codex assisted with data preparation, software implementation, and interface design. Scientific claims remain bounded by the admitted evidence and documented model assumptions.
 
-## Phase 3A research audit
+---
 
-The research catalogue migration and audit are documented in `research/PHASE3A_REPORT.md`. The repository includes a compressed, topic-indexed copy of the validated Phase 1 database at `data/flame_research.db.gz`.
+<div align="center">
 
-## Phase 3B backend
+**Follow the experiment. Inspect the evidence. Understand the limits.**
 
-The standalone `backend` package provides read-only scientific data services, integrity validation, Pandas/NumPy descriptive summaries, FTS5 passage search, and a restricted SQL interface over approved projections. See `research/PHASE3B_REPORT.md` for its scope and limits. Run `python -m pytest tests/test_backend.py tests/test_phase3a.py -q` with `requirements.txt` and `requirements-dev.txt` installed.
-
-## Phase 3C research pages
-
-Research Explorer browses domains, investigations, topics, source records, and PDF passage hits. Research Records filters the admitted FLEX Table IX subset, displays original measured tokens and units, shows missing cells and source-page provenance, and permits bounded read-only queries with CSV export. See `research/PHASE3C_REPORT.md` for verification and limitations. These changes are committed to a development branch; Phase 3 does not publish new functionality to the public Streamlit demo.
-
-## Phase 3D scientific comparisons
-
-Compare & Analyze filters admitted FLEX tests by fuel, oxygen mole fraction, pressure and original test ID. It plots only pairs with both requested values, retains missing and source-classification status, shows original axis units, and includes a source-trace table. The scatter and fuel distribution are descriptive views of the selected subset; changing experimental conditions are flagged. See `research/PHASE3D_REPORT.md` for numerical checks and limits. Plotly is required in addition to the existing runtime packages.
-
-## Phase 3E evidence retrieval
-
-`backend/retrieval.py` routes a question by intent, domain, investigation aliases and topic synonyms, then retrieves a bounded set of indexed PDF passages, approved objective summaries or exact validated FLEX test measurements. Assistant shows the deterministic evidence packet and exact citations; Solution Lab separates source observations from design questions; View Effect keeps conceptual artwork distinct from verified test conditions. See `research/PHASE3E_REPORT.md` for tests and limitations, and `research/ADMISSION_ARCHITECTURE.md` for the future reviewed-source workflow. No public Add Research control or unattended source admission is enabled.
-
-## Phase 3F local readiness
-
-The full local integration audit is documented in `research/PHASE3F_READINESS.md`. All 30 automated tests pass and all six sections load locally. The integrated backend is usable for the admitted FLEX report subset and source-linked documentary retrieval. Mir fire facts, BASS-II numerical comparisons and authentic experiment footage remain outside the approved corpus; the interface reports those gaps rather than filling them from unreviewed material. The development branch is not the public Streamlit deployment.
-
-## Phase 4A optional Groq configuration
-
-The official Groq SDK is an optional generation boundary in `backend/groq_adapter.py`. The existing deterministic evidence mode works with no API key. Copy `.env.example` values into private environment variables or `.streamlit/secrets.toml` (never commit that file). `GROQ_API_KEY` is the only secret. `GROQ_MODEL` defaults to `qwen/qwen3.8-27b`; confirm that the chosen model is still available on the owner's free-tier account before any live request. `GROQ_MAX_OUTPUT_TOKENS`, `GROQ_REQUEST_TIMEOUT` and `AI_SESSION_REQUEST_LIMIT` have bounded defaults. See `research/PHASE4A_REPORT.md` for the offline mock results and limits.
-
-## Phase 4B grounded answer service
-
-`backend/grounded.py` takes the existing category-routed evidence packet, supplies at most six admitted items within an 11,000-character context, and requests short citation-tagged JSON claims through the optional Groq adapter. It checks citation IDs, source vocabulary and numbers against cited evidence before exposing any generated claim. Unsupported answers and provider failures return the original deterministic packet. See `research/PHASE4B_REPORT.md` for offline tests and the limits of heuristic claim verification.
-
-## Phase 4C Assistant and Solution Lab
-
-The development-branch Assistant and Solution Lab now use the same `research_turn` service, optional Groq adapter, citation checks and per-session request budget. Assistant retains a short conversation and sends at most two prior questions as phrasing context; only current retrieved evidence supports claims. Solution Lab separates verified observations, checked interpretation, conditional engineering directions, limitations and citations. Missing keys, unsupported questions and provider errors retain the verified evidence view. See `research/PHASE4C_REPORT.md` for tests and remaining limits. No live Groq request or public deployment occurred in this checkpoint.
-
-## Phase 4D documentary research expansion
-
-The development corpus adds ten short factual paraphrases tied to official NASA pages: Mir, Apollo 1, Apollo 13, combustion background and three Spinoff accounts. They occupy a separate searchable documentary table, never the FLEX measurement table. Mir questions now retrieve historical evidence; unrelated incidents remain unsupported. ACME and FLEX-2 are catalogue-only pointers with no admitted numerical data. `migrations/phase4d.py` applies the reviewed manifest to a copy and preserves row hashes of the original scientific tables. `scripts/stage_research.py` prepares new official-source candidates in a local review queue only; it cannot admit them. See `research/PHASE4D_REPORT.md` for provenance, rights, tests and gaps.
+</div>

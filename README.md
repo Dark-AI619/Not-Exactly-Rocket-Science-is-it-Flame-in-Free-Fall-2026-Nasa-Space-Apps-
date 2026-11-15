@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface is connected to verified research in staged development checkpoints. Phase 3 provides real FLEX records, descriptive comparisons and source retrieval. Phase 4C adds optional, source-checked Groq explanations to Assistant and Solution Lab on the development branch. The public deployment remains on the earlier Phase 3B version. No physical simulation or sample measurements are invented.
+An independent NASA Space Apps Challenge 2026 project by **Not Exactly Rocket Science, Is It?!**. The six-section Streamlit interface connects verified FLEX report records, descriptive comparisons, source retrieval, optional source-checked Groq explanations, and a bounded D-squared droplet model. The model is a teaching approximation, separate from NASA observations. The public deployment remains on the earlier Phase 3B version; the Phase 5 release candidate is on `phase3-integration`.
 
 ## Run locally
 
@@ -24,7 +24,7 @@ The app works in evidence-only mode without secrets. An owner may set `GROQ_API_
 
 Phase 5 Pass A adds a connected path from a verified FLEX test through its measurements, descriptive comparison, source-linked question, Solution Lab, and test-aware visual context. See `research/PHASE5A_REPORT.md` for that checkpoint's local browser journey.
 
-Phase 5 Pass B adds a limited D-squared liquid-droplet model to View Effect. Visitors can play, pause, and reset a calculated diameter curve with illustrative sliders or load compatible, validated FLEX D₀ and K values. Report outcomes and burn durations remain separate from calculated values. See `research/PHASE5B_REPORT.md` for scientific assumptions, source checks, and browser verification. Final responsive and release checks remain for Pass C.
+Phase 5 Pass B adds a limited D-squared liquid-droplet model to View Effect. Visitors can play, pause, and reset a calculated diameter curve with illustrative sliders or load compatible, validated FLEX D₀ and K values. Report outcomes and burn durations remain separate from calculated values. See `research/PHASE5B_REPORT.md` for scientific assumptions, source checks, and browser verification. Pass C's final browser journey, responsive review, and release checks are in `research/PHASE5C_REPORT.md`.
 
 ## Research status
 

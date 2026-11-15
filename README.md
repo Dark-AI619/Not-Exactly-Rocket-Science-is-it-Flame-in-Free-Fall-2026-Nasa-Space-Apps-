@@ -1,124 +1,134 @@
 <div align="center">
 
-# 🔥 Flame in Freefall
+# 🔥🚀 FLAME IN FREEFALL
 
-### Explore how fire behaves when gravity lets go.
+### What happens to fire when gravity lets go?
 
-**NASA research → traceable experiments → scientific insight**
+**Explore NASA experiments. Follow the evidence. Bring the mathematics to life.**
 
-An independent NASA Space Apps Challenge 2026 project<br>
-**Team: Not Exactly Rocket Science, Is It?!**
+![NASA Space Apps astronaut artwork](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/raw/refs/heads/phase3-integration/assets/space_apps_astronaut.jpg)
 
-![Space Apps astronaut artwork](assets/space_apps_astronaut.jpg)
+**Built by Not Exactly Rocket Science, Is It?!**<br>
+*An independent NASA Space Apps Challenge 2026 project*
 
-[Explore the science](#the-science-we-can-support) · [Judge journey](#a-three-minute-judge-journey) · [Run the app](#run-locally) · [Source and verification](#evidence-you-can-inspect)
+[🚀 Explore the App](https://flame-in-freefall-2026.streamlit.app/) · [💻 Completed Application](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/tree/phase3-integration) · [🧭 Take the Judge Tour](#-your-three-minute-mission)
+
+**273 verified FLEX tests · 329 searchable NASA report pages · 6 connected workspaces**
 
 </div>
 
 ---
 
-## Why this matters
+## 🌌 The problem: valuable science, difficult to explore
 
-Fire safety in space begins with understanding combustion under unfamiliar conditions. NASA's investigations contain valuable evidence, but report tables, experiment identifiers, missing measurements, and technical terminology can make that evidence difficult to explore.
+Understanding combustion in microgravity matters to spacecraft fire-safety research. Yet the evidence often lives inside long technical reports: dense tables, unfamiliar test identifiers, scattered source passages, and measurements with important limitations.
 
-**Flame in Freefall turns a verified subset of NASA research into one connected investigation:** discover a test, inspect its measurements, compare reported relationships, ask a source-grounded question, explore engineering considerations, and interact with a clearly bounded mathematical model.
+For students, curious explorers, and hackathon judges, finding a number is only the beginning. Understanding what was measured, where it came from, and what it can support takes more work.
 
-## One investigation. Six connected workspaces.
+**We built Flame in Freefall to make that journey accessible.**
 
-| Workspace | What a visitor can do |
+## 💡 Our solution: turn a NASA report into an investigation you can follow
+
+Start with a real experiment. Inspect its conditions. Compare its measurements. Ask a question with the evidence beside you. Then explore a mathematical droplet model using compatible source values.
+
+The selected experiment travels with you through the app.
+
+> **Discover → Investigate → Analyze → Ask → Explore Solutions → Simulate**
+
+Our team brings verified report data, scientific visualization, evidence retrieval, and interactive mathematics into one connected research experience.
+
+## 🛰️ What we built
+
+| Workspace | The experience |
 | --- | --- |
-| **Research Explorer** | Discover investigations, scientific topics, and source records; begin with a verified FLEX example. |
-| **Research Records** | Filter actual report-extracted tests, inspect original values and units, follow provenance, and run restricted read-only SQL. |
-| **Compare & Analyze** | Plot descriptive relationships with original axis units, missing-value counts, and traceable experiment records. |
-| **AI Research Assistant** | Ask a research question, inspect retrieved evidence, and view optional citation-checked Groq explanations. |
-| **Solution Lab** | Connect a research question to supporting observations and conditional engineering considerations. |
-| **View Effect** | Load compatible report parameters or illustrative inputs into a D-squared droplet model, then play, pause, and reset its calculated trajectory. |
+| 🔎 **Research Explorer** | Discover NASA investigations and scientific topics, or begin immediately with a selected verified FLEX experiment. |
+| 📋 **Research Records** | Explore original reported values, units, missing measurements, and source pages. Filter experiments or use bounded read-only SQL. |
+| 📊 **Compare & Analyze** | Investigate measurement relationships through interactive charts, with units, exclusions, and source traceability. |
+| 🤖 **AI Research Assistant** | Ask research questions and inspect the supporting citations. Optional Groq generation adds explanations checked against retrieved evidence. |
+| 🛠️ **Solution Lab** | Connect research observations to engineering questions and conditional design considerations. |
+| 🔥 **View Effect** | Play, pause, and reset a D-squared droplet model. Load compatible NASA report parameters and watch the calculated diameter change. |
 
-The selected experiment and relevant question travel between workspaces through session context.
+## 🧭 Your three-minute mission
 
-## A three-minute judge journey
+**Begin with FLEX–054. Follow it all the way to the model.**
 
-1. Open **Research Explorer** and select **Start with a verified FLEX experiment**.
-2. Inspect **FLEX–054** in Research Records: original measurement tokens, missing cells, and the NASA report citation remain accessible.
-3. Select **Compare values** to see its initial diameter and reported burn duration with units.
-4. Select **Ask about this test**, submit the question, and expand the evidence citation.
-5. Continue to **Explore solutions** to examine the supporting research.
-6. Select **Open droplet model**, load the compatible D₀ and K values, and press **Play**.
+1. **Discover:** select **Start with a verified FLEX experiment** in Research Explorer.
+2. **Investigate:** inspect the original measurement cells and NASA report citation.
+3. **Analyze:** select **Compare values** to explore initial droplet diameter against reported burn duration.
+4. **Ask:** select **Ask about this test**, submit the question, and open its evidence citation.
+5. **Explore:** continue to **Explore solutions** to inspect supporting observations.
+6. **Simulate:** select **Open droplet model**, load compatible D₀ and K values, and press **Play**.
 
-The reported burn duration and calculated model endpoint appear separately, so visitors can see where observation ends and mathematical interpretation begins.
+**One experiment. A continuous path from source to understanding.**
 
-## The science we can support
+## 🔥 Mathematics you can see
 
-| Verified corpus | Included scope |
+<div align="center">
+
+![Conceptual flame suspended above Earth](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/raw/refs/heads/phase3-integration/assets/flame_over_earth.png)
+
+*Fire-in-space artwork supplied by the project owner; conceptual illustration.*
+
+### D(t)² = D₀² − Kt
+
+</div>
+
+Change the initial droplet diameter or burning-rate parameter. Follow the diameter-versus-time curve as the glowing schematic shrinks. Compare illustrative inputs with compatible parameters from a validated FLEX record.
+
+| Model quantity | Unit |
+| --- | --- |
+| Initial liquid-droplet diameter, D₀ | mm |
+| Constant burning-rate parameter, K | mm²/s |
+| Model elapsed time, t | s |
+
+The warm core and halo are a **schematic flame visualization**. The size follows the liquid-droplet model; the glow is illustrative and is **not an experimentally observed flame image**.
+
+The constant-K model is a teaching approximation. It does not predict flame geometry, extinction, oxygen response, or spacecraft safety. NASA's reported D₀ and fitted K use different time references, so the app displays the reported burn duration separately from the calculated endpoint. **258 admitted tests** meet the source-input compatibility checks.
+
+## 🧪 Real evidence at the center
+
+| Research collection | Included |
 | --- | ---: |
-| FLEX report-extracted tests | **273** |
-| Original measurement cells, including unavailable-value markers | **2,457** |
+| Validated FLEX report-extracted tests | **273** |
+| Original measurement cells, including missing-value markers | **2,457** |
 | Searchable PDF page passages | **329** |
 | Source-linked documentary notes | **10** |
 | Catalogued sources | **25** |
 
-The numerical dataset is a validated transcription subset of **NASA/TP-2015-216046**, Appendix A, Table IX. Original units, printed values, page references, missing values, and data classifications are preserved.
+Our numerical foundation is a validated subset of **NASA/TP-2015-216046, Appendix A, Table IX**. Original printed values, units, source pages, classifications, and missing values remain inspectable.
 
-These records are classified **NASA_REPORT_EXTRACTED**. They are a subset of the report's experiments; original NASA PSI telemetry has not been acquired. BASS-II, SAME, and Saffire provide research context, with no admitted numerical experiment rows in this release.
+The dataset contains report-extracted records, not original PSI telemetry. BASS-II, SAME, and Saffire supply research context; numerical experiments from those families have not been admitted.
 
-### A model with visible boundaries
+### Why the evidence matters
 
-```text
-D(t)² = D₀² − Kt
+- **Trace every plotted point:** follow its test identifier and source page.
+- **See missing data:** unavailable values remain visible and are excluded from incompatible chart pairs.
+- **Inspect AI support:** citations and numerical-token checks accompany optional generated explanations.
+- **Keep observations intact:** calculated model outputs never enter the verified research database.
 
-D₀: initial liquid-droplet diameter [mm]
-K:  constant burning-rate parameter [mm²/s]
-t:  model elapsed time [s]
-```
+The app works without an API key in evidence mode. Optional Groq generation requires private owner configuration; live authenticated generation remains to be verified. Automated claim checks are heuristic, so source inspection remains part of the experience.
 
-Python calculates the diameter curve and drives the schematic object's size. The warm core and halo are **schematic flame visualization**, not an experimentally observed flame image or a prediction of flame geometry.
+## 🎯 Who this helps
 
-The model assumes constant K. NASA's reported D₀ and fitted K use different time references, so loading source values produces a teaching approximation. It does not predict flame extinction, oxygen effects, or spacecraft safety. Compatible source loading is available for **258 of the 273** admitted tests; other records retain a clear explanation and illustrative mode.
+**Students and educators** can move from an abstract combustion equation to an interactive example grounded in a NASA report.
 
-<div align="center">
+**Research explorers** can inspect values, conditions, and citations without manually navigating hundreds of report pages.
 
-![Conceptual flame above Earth](assets/flame_over_earth.png)
+**Engineering learners** can connect published observations to design questions while seeing the limits of the available evidence.
 
-*Supplied conceptual artwork — not experimental footage.*
+Our contribution is an accessible route through the science: every interpretation has a path back to its source.
 
-</div>
+## ⚙️ Built with
 
-## Evidence you can inspect
+**Python · Streamlit · SQLite FTS5 · Pandas · NumPy · Plotly · optional Groq**
 
-Every scientific view keeps its evidence close:
+Read-only data services connect the verified corpus to the interface. Category-routed retrieval supplies bounded evidence packets. Python computes the droplet trajectory, while Plotly and the schematic show the same model state.
 
-- Original test identifiers, units, measurement classifications, and report pages.
-- Missing values shown explicitly and excluded from chart pairs where needed.
-- Separate source observations, calculated model values, and engineering interpretations.
-- Bounded SQLite FTS5 retrieval with inspectable citations.
-- Optional AI output checked against retrieved citation IDs and numerical tokens.
+**Verification:** 70 automated tests passed in the final integration run. The visual refinement passed 17 targeted simulation tests, with local browser inspection of the connected judge journey, charts, and model playback.
 
-Citation checks are heuristic; visitors should inspect the underlying sources. Without a Groq key, the app remains usable in deterministic evidence mode. **No authenticated live Groq call has been verified in this project session.**
+## 🚀 Run it yourself
 
-Primary scientific references:
-
-- [NASA FLEX detailed-results report](https://ntrs.nasa.gov/citations/20150023456)
-- [NASA technical reference supporting the D-squared model](https://ntrs.nasa.gov/citations/19820015544)
-- [NASA PSI FLEX investigation](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69)
-
-## Built for transparent scientific exploration
-
-**Python 3.12 · Streamlit · SQLite FTS5 · Pandas · NumPy · Plotly · optional Groq**
-
-The database is opened read-only. Restricted SQL uses approved projections, row and execution limits, and an SQLite authorizer. Simulation outputs are never written into the verified corpus.
-
-```text
-app.py                  Six connected research workspaces
-backend/                Data access, analysis, retrieval, AI checks, simulation
-data/                   Compressed verified SQLite corpus
-assets/                 Supplied astronaut and flame artwork
-tests/                  Scientific and service verification
-research/               Source admission and checkpoint reports
-```
-
-## Run locally
-
-Use Python 3.12 and check out **phase3-integration**:
+Use **Python 3.12** and the completed application branch:
 
 ```sh
 git clone --branch phase3-integration https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-.git
@@ -126,44 +136,41 @@ cd Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-
 python -m venv .venv
 ```
 
-Activate the environment, then:
+Activate your environment, then:
 
 ```sh
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-No API key is required for evidence mode. For optional generation, the owner can configure `GROQ_API_KEY` privately in Streamlit secrets or environment variables. Non-secret controls are documented in [.env.example](.env.example). Never commit a key. The per-session request budget does not cap aggregate usage across public visitors.
+For Streamlit Community Cloud, select **branch `phase3-integration`** and entry point **`app.py`**. The public demo may show the earlier preview until the owner completes redeployment.
 
-### Owner deployment
+No key is required for evidence mode. Optional generation uses `GROQ_API_KEY` in private environment variables or Streamlit secrets. See [configuration options](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/blob/phase3-integration/.env.example). Per-session request limits do not cap aggregate public use.
 
-Deploy from **branch `phase3-integration`**, entry point **`app.py`**, using Python 3.12. The required database and artwork are committed. The default `main` branch contains an earlier preview and does not contain this completed simulation.
+## 📚 NASA sources
 
-Deployment and final live Groq verification remain owner-controlled. A previously published demo may show the earlier preview until the owner redeploys.
+- [Detailed Results From the Flame Extinguishment Experiment (FLEX)](https://ntrs.nasa.gov/citations/20150023456)
+- [NASA technical reference supporting the D-squared model](https://ntrs.nasa.gov/citations/19820015544)
+- [NASA PSI — FLEX investigation](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69)
+- [Scientific model assumptions and verification](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/blob/phase3-integration/research/PHASE5B_REPORT.md)
+- [Source admission architecture](https://github.com/Dark-AI619/Not-Exactly-Rocket-Science-is-it-Flame-in-Free-Fall-2026-Nasa-Space-Apps-/blob/phase3-integration/research/ADMISSION_ARCHITECTURE.md)
 
-## Verification
+## 👩‍🚀 Meet the team
 
-The Phase 5 acceptance run passed **70 automated tests**, compilation, database validation, and a local browser journey across all six workspaces. The final visual pass passed **17 targeted simulation tests** and local inspection of Explorer, Assistant, comparison charts, and the shrinking schematic droplet.
+### Not Exactly Rocket Science, Is It?!
 
-```sh
-python -m pip install -r requirements-dev.txt
-python -m pytest tests -q
-```
+We built **Flame in Freefall** to make NASA combustion research easier to explore, question, and understand.
 
-[Final acceptance report](research/PHASE5C_REPORT.md) · [Model assumptions and verification](research/PHASE5B_REPORT.md) · [Source admission architecture](research/ADMISSION_ARCHITECTURE.md)
+ChatGPT/Codex assisted with data preparation, implementation, and interface design. The project owner supplied the astronaut/Space Apps and flame-over-Earth artworks. Source and artwork rights remain subject to their respective terms; inclusion does not grant downstream reuse rights.
 
-## Team, attribution, and responsible use
-
-Created by **Not Exactly Rocket Science, Is It?!** for NASA Space Apps Challenge 2026. This is an independent project; NASA does not operate or endorse the dashboard.
-
-NASA sources are linked through the research catalogue with recorded provenance and rights status. The owner supplied the astronaut/Space Apps and flame-over-Earth artworks; their inclusion does not grant downstream reuse rights. Source-specific rights must be checked before redistribution.
-
-ChatGPT/Codex assisted with data preparation, software implementation, and interface design. Scientific claims remain bounded by the admitted evidence and documented model assumptions.
+This is an independent NASA Space Apps Challenge project. NASA does not operate or endorse the application.
 
 ---
 
 <div align="center">
 
-**Follow the experiment. Inspect the evidence. Understand the limits.**
+### 🔥 Follow the experiment. Find the evidence. Watch the mathematics move.
+
+**FLAME IN FREEFALL — by Not Exactly Rocket Science, Is It?! 🚀**
 
 </div>

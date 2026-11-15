@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
-from backend import (GroqAdapter, QueryRejected, ResearchError, ResearchStore, RestrictedSQL,
-                     build_comparison, load_groq_settings, research_turn, retrieve_evidence,
+from backend import (DropletModel, GroqAdapter, QueryRejected, ResearchError, ResearchStore, RestrictedSQL,
+                     build_comparison, compatible_report_inputs, load_groq_settings, research_turn, retrieve_evidence,
                      validate_database)
 
 ASSETS = Path(__file__).parent / "assets"
@@ -93,6 +94,9 @@ h1,h2,h3 {font-family:'Space Grotesk',sans-serif;letter-spacing:-.035em}
 .effect-art {max-width:600px;margin:auto}
 .effect-art img {border-radius:11px}
 .effect-label {color:#adc2c7;font-size:.8rem;text-align:center;padding:.9rem .4rem .1rem}
+.droplet-stage {height:220px;display:grid;place-items:center;background:radial-gradient(circle,#193d45,#101b20 70%);border:1px solid #3a5960;border-radius:14px;margin:.5rem 0 1rem}
+.droplet {border-radius:50%;background:radial-gradient(circle at 32% 28%,#c1fcfa,#59cbd5 55%,#257987);box-shadow:0 0 18px #4bc6d444;border:1px solid #c2f8f6;transition:width .16s linear,height .16s linear}
+.model-note {color:#a9c1c7;font-size:.84rem;line-height:1.55}
 .step {display:inline-block;color:#f1a16d;font-size:.8rem;font-weight:700;margin-bottom:.5rem}
 div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea {background:#14232a;border:1px solid #3c555e;color:#e8f2f3}
 div[data-testid="stSelectbox"] > div {background:#14232a}
@@ -166,13 +170,13 @@ def journey_context(store, workspace):
     st.caption(f'FOLLOWING {record["original_test_id"]} · {record["fuel"]} · reported {record["test_end"]}')
     actions = {
         "records": (("Compare values", "compare"), ("Ask about this test", "assistant"),
-                    ("View test context", "effect")),
+                    ("Open droplet model", "effect")),
         "compare": (("Inspect measurements", "records"), ("Ask about this test", "assistant"),
                     ("Explore solutions", "lab")),
         "assistant": (("Inspect measurements", "records"), ("Explore solutions", "lab"),
-                      ("View test context", "effect")),
+                      ("Open droplet model", "effect")),
         "lab": (("Inspect measurements", "records"), ("Ask about this test", "assistant"),
-                ("View test context", "effect")),
+                ("Open droplet model", "effect")),
         "effect": (("Inspect measurements", "records"), ("Compare values", "compare"),
                    ("Ask about this test", "assistant")),
     }
@@ -872,8 +876,60 @@ def assistant():
             st.caption("Ask a question to see source citations, PDF pages and original measurements here.")
 
 
+def simulation_player(model):
+    """One small independently rerun view; all values come from DropletModel."""
+    end = model.ideal_zero_time_s
+    if st.session_state.get("sim_playing"):
+        st.session_state["sim_time_s"] = min(end, st.session_state["sim_time_s"] + end / 90)
+        if st.session_state["sim_time_s"] >= end:
+            st.session_state["sim_playing"] = False
+            st.rerun()
+    t = min(st.session_state.get("sim_time_s", 0.0), end)
+    diameter = model.diameter_mm(t)
+    play, pause, reset = st.columns(3)
+    if play.button("▶ Play", key="sim_play", disabled=st.session_state.get("sim_playing", False), width="stretch"):
+        if t >= end:
+            st.session_state["sim_time_s"] = 0.0
+        st.session_state["sim_playing"] = True
+        st.rerun()
+    if pause.button("Ⅱ Pause", key="sim_pause", disabled=not st.session_state.get("sim_playing", False), width="stretch"):
+        st.session_state["sim_playing"] = False
+        st.rerun()
+    if reset.button("↺ Reset", key="sim_reset", width="stretch"):
+        st.session_state["sim_playing"] = False
+        st.session_state["sim_time_s"] = 0.0
+        st.rerun()
+    diameter_px = max(5, round(160 * diameter / model.initial_diameter_mm))
+    html(f'<div class="droplet-stage" role="img" aria-label="Schematic predicted droplet diameter {diameter:.2f} millimeters"><div class="droplet" style="width:{diameter_px}px;height:{diameter_px}px"></div></div>')
+    st.caption("Schematic droplet size · cyan circle represents predicted liquid diameter, not a flame or measured image.")
+    current, elapsed, ideal = st.columns(3)
+    current.metric("Predicted diameter", f"{diameter:.2f} mm")
+    elapsed.metric("Model elapsed time", f"{t:.1f} s")
+    ideal.metric("Ideal D = 0 time", f"{end:.1f} s")
+    profile = model.profile()
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(x=[point[0] for point in profile], y=[point[1] for point in profile],
+                                mode="lines", name="D-squared model", line=dict(color="#72dce2", width=3)))
+    figure.add_trace(go.Scatter(x=[t], y=[diameter], mode="markers", name="Current model state",
+                                marker=dict(color="#f2a16e", size=12)))
+    figure.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+                         font_color="#dbe9ec", height=340, margin=dict(l=25, r=15, t=25, b=20),
+                         xaxis_title="Model elapsed time (s)", yaxis_title="Predicted droplet diameter (mm)",
+                         showlegend=True)
+    figure.update_xaxes(range=[0, end], gridcolor="#304750")
+    figure.update_yaxes(range=[0, model.initial_diameter_mm * 1.08], gridcolor="#304750")
+    st.plotly_chart(figure, width="stretch", key="sim_diameter_chart")
+
+
+def illustrative_inputs():
+    st.session_state["sim_mode"] = "illustrative"
+    st.session_state.pop("sim_source_id", None)
+    st.session_state["sim_playing"] = False
+    st.session_state["sim_time_s"] = 0.0
+
+
 def effect():
-    heading("05 / VISUAL CONTEXT", "View Effect", "Examine the visual idea of a flame above Earth while keeping artwork separate from experimental evidence.")
+    heading("05 / MODEL & VISUAL CONTEXT", "View Effect", "Explore a bounded droplet-size model while keeping the supplied artwork, NASA measurements, and calculated values distinct.")
     html(f'<div class="effect-stage"><div class="effect-art"><img src="data:image/png;base64,{flame_data}" alt="Flame suspended above the curve of Earth"></div><div class="effect-label">Supplied flame-over-Earth artwork · conceptual visual, not experimental footage</div></div>')
     control, context = st.columns([1, 1.3], gap="large")
     try:
@@ -893,14 +949,59 @@ def effect():
                 st.write(f'**{row["original_test_id"]} · {row["fuel"]}**')
                 st.caption(f'O₂ mole fraction {row["oxygen_mole_fraction"]} · pressure {row["pressure_mmhg"]} mmHg · reported outcome {row["test_end"]}')
                 st.link_button("NASA report and source record", row["source_url"])
+                record = store.experiment(chosen)
+                source_inputs = compatible_report_inputs(record)
+                if source_inputs:
+                    if st.button("Load this test's D₀ and K into model", type="primary"):
+                        st.session_state["sim_initial_mm"] = source_inputs.initial_diameter_mm
+                        st.session_state["sim_rate_mm2_s"] = source_inputs.burning_rate_mm2_s
+                        st.session_state["sim_source_id"] = chosen
+                        st.session_state["sim_mode"] = "source"
+                        st.session_state["sim_playing"] = False
+                        st.session_state["sim_time_s"] = 0.0
+                        st.rerun()
+                else:
+                    st.info("This test lacks a validated positive diameter and burning-rate pair in the required units; use illustrative model inputs below.")
             with context:
                 html('<div class="section-title" style="margin-top:0">Research evidence</div>')
                 number = row["original_test_id"][-3:]
                 packet = load_evidence(f"What measurements and outcome did FLEX test {number} report?", investigation="FLEX")
                 evidence_items({**packet, "items": [item for item in packet["items"]
                                                       if item.get("experiment_id") == row["original_test_id"]]}, compact=True)
-                st.caption("The artwork does not depict the selected test. No authentic experimental footage is admitted to this view; no simulation is calculated.")
+                st.caption("The artwork does not depict the selected test. The model below calculates only liquid droplet diameter; it does not reproduce flame appearance.")
             journey_context(store, "effect")
+            html('<div class="section-title">D-squared droplet model</div>')
+            st.write("D(t)² = D₀² − Kt. A constant positive burning-rate parameter K makes the model droplet diameter shrink until its ideal zero-diameter time. It does not predict flame extinction, oxygen response, or spacecraft fire behavior.")
+            if st.session_state.get("sim_mode") == "source" and st.session_state.get("sim_source_id") != chosen:
+                st.session_state["sim_initial_mm"] = 3.0
+                st.session_state["sim_rate_mm2_s"] = 0.4
+                illustrative_inputs()
+            st.session_state.setdefault("sim_initial_mm", 3.0)
+            st.session_state.setdefault("sim_rate_mm2_s", 0.4)
+            inputs, display = st.columns([1, 1.3], gap="large")
+            with inputs:
+                st.slider("Initial droplet diameter D₀ (mm)", 0.5, 5.0, step=0.01,
+                          key="sim_initial_mm", on_change=illustrative_inputs)
+                st.slider("Burning-rate parameter K (mm²/s)", 0.05, 1.2, step=0.01,
+                          key="sim_rate_mm2_s", on_change=illustrative_inputs)
+                if st.session_state.get("sim_mode") == "source" and source_inputs:
+                    st.success(f'Source-derived inputs: {source_inputs.original_test_id} · D₀ {source_inputs.diameter_original} mm ({source_inputs.diameter_classification}, PDF p. {source_inputs.diameter_pdf_page}); K {source_inputs.rate_original} mm²/s ({source_inputs.rate_classification}, PDF p. {source_inputs.rate_pdf_page}).')
+                    reported_duration = (f"{source_inputs.reported_burn_duration} s" if source_inputs.reported_burn_duration
+                                         else "unavailable")
+                    st.caption(f'NASA report separately records {source_inputs.reported_outcome} and burn duration {reported_duration}. These are observations, not model outputs.')
+                    st.link_button("Inspect source of loaded inputs", source_inputs.source_url)
+                else:
+                    st.info("Illustrative inputs. These slider values are examples; no NASA test is claimed to have used them.")
+                st.caption("NASA defines D₀ at igniter-on and fits K from shortly after ignition to extinction. Their time origins differ, so a source-loaded curve is a teaching approximation, not a reconstruction of the observed trajectory.")
+            model = DropletModel(st.session_state["sim_initial_mm"], st.session_state["sim_rate_mm2_s"])
+            signature = (model.initial_diameter_mm, model.burning_rate_mm2_s)
+            if st.session_state.get("sim_signature") != signature:
+                st.session_state["sim_signature"] = signature
+                st.session_state["sim_time_s"] = 0.0
+                st.session_state["sim_playing"] = False
+            with display:
+                st.fragment(simulation_player, run_every="0.2s" if st.session_state.get("sim_playing") else None)(model)
+            st.caption("Model zero-diameter time is D₀²/K, a mathematical endpoint only. The chart and schematic are calculated from the same Python model; no results are written to SQLite.")
     except (OSError, ResearchError, ValueError) as exc:
         st.error(f"Research context unavailable: {exc}")
 

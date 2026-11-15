@@ -22,7 +22,9 @@ The Phase 4E release candidate is on `phase3-integration`. It has **not** been m
 
 The app works in evidence-only mode without secrets. An owner may set `GROQ_API_KEY` privately for optional generation. The non-secret settings in `.env.example` control model, maximum output tokens, timeout and per-session request limit. Do not commit `.env`, `.streamlit/secrets.toml`, or a live key. The per-session limit cannot protect one shared free quota from many separate visitors; public launch would need a separate global budget or abuse-control service. Free inference availability and model access can change. No paid billing is required or enabled by this repository.
 
-Phase 5 Pass A adds a connected path from a verified FLEX test through its measurements, descriptive comparison, source-linked question, Solution Lab, and test-aware visual context. The mathematical simulation belongs to Pass B and is not yet present. See `research/PHASE5A_REPORT.md` for the local browser journey and remaining work.
+Phase 5 Pass A adds a connected path from a verified FLEX test through its measurements, descriptive comparison, source-linked question, Solution Lab, and test-aware visual context. See `research/PHASE5A_REPORT.md` for that checkpoint's local browser journey.
+
+Phase 5 Pass B adds a limited D-squared liquid-droplet model to View Effect. Visitors can play, pause, and reset a calculated diameter curve with illustrative sliders or load compatible, validated FLEX D₀ and K values. Report outcomes and burn durations remain separate from calculated values. See `research/PHASE5B_REPORT.md` for scientific assumptions, source checks, and browser verification. Final responsive and release checks remain for Pass C.
 
 ## Research status
 

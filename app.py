@@ -13,6 +13,25 @@ from backend import (GroqAdapter, QueryRejected, ResearchError, ResearchStore, R
 ASSETS = Path(__file__).parent / "assets"
 ASTRONAUT = ASSETS / "space_apps_astronaut.jpg"
 FLAME = ASSETS / "flame_over_earth.png"
+MEASURE_LABELS = {
+    "pressure_mmhg": "Atmospheric pressure · mmHg",
+    "oxygen_mole_fraction": "Oxygen mole fraction",
+    "nitrogen_mole_fraction": "Nitrogen mole fraction",
+    "carbon_dioxide_mole_fraction": "Carbon dioxide mole fraction",
+    "helium_mole_fraction": "Helium mole fraction",
+    "initial_diameter_mm": "Initial droplet diameter · mm",
+    "visible_extinction_diameter_mm": "Visible extinction diameter · mm",
+    "burning_rate_mm2_s": "Burning-rate constant · mm²/s",
+    "burn_time_s": "Burn duration · s",
+}
+SOURCE_LABELS = {
+    "VERIFIED": "Report checked", "VERIFIED_PAGE": "NASA page checked",
+    "PENDING_VALIDATION": "Awaiting review", "RIGHTS_UNCONFIRMED": "Rights review needed",
+    "URL_LISTED": "Link listed", "PASSAGES_ADMITTED": "Searchable report text",
+    "DOCUMENTARY_ADMITTED": "Source-linked summary", "CATALOGUE_ONLY": "Reference only",
+    "PDF": "Report", "INCIDENT": "Historical event", "BACKGROUND": "Background",
+    "INVESTIGATION": "Investigation", "VIDEO": "Video link",
+}
 
 st.set_page_config(page_title="Flame in Freefall", page_icon="🔥", layout="wide")
 st.markdown(
@@ -100,6 +119,71 @@ def surface(label, title, body, accent="cyan"):
     html(f'<div class="surface {accent}"><span class="smallcaps">{label}</span><h3>{title}</h3><p>{body}</p></div>')
 
 
+def follow_experiment(experiment_id, *, destination):
+    """Carry a validated record selection to a specific workspace."""
+    st.session_state["active_investigation"] = "FLEX"
+    st.session_state["active_experiment"] = experiment_id
+    topic = st.session_state.get("active_topic")
+    if topic:
+        with ResearchStore() as store:
+            if not any(row["id"] == topic and row["domain_id"] == "combustion" for row in store.topics()):
+                st.session_state.pop("active_topic", None)
+    if destination == "records":
+        st.session_state["record_target"] = experiment_id
+        st.switch_page(pages[1])
+    if destination == "compare":
+        st.session_state["compare_target"] = experiment_id
+        st.switch_page(pages[2])
+    if destination == "assistant":
+        number = experiment_id[-3:]
+        st.session_state["active_question"] = f"What measurements and outcome did FLEX test {number} report?"
+        st.session_state["assistant_target"] = True
+        st.switch_page(pages[4])
+    if destination == "lab":
+        st.session_state["lab_problem"] = st.session_state.get(
+            "active_question", f"What evidence informs a design question about FLEX test {experiment_id[-3:]}?"
+        )
+        st.session_state["lab_investigation"] = "FLEX"
+        st.switch_page(pages[3])
+    if destination == "effect":
+        st.session_state["effect_target"] = experiment_id
+        st.switch_page(pages[5])
+
+
+def journey_context(store, workspace):
+    """Small record-aware handoff; stale session IDs are never shown as evidence."""
+    experiment_id = st.session_state.get("active_experiment")
+    if not experiment_id:
+        return
+    try:
+        record = store.experiment(experiment_id)
+    except ResearchError:
+        st.session_state.pop("active_experiment", None)
+        return
+    if record["validation_status"] != "VALIDATED" or record["investigation_id"] != "FLEX":
+        st.session_state.pop("active_experiment", None)
+        return
+    st.caption(f'FOLLOWING {record["original_test_id"]} · {record["fuel"]} · reported {record["test_end"]}')
+    actions = {
+        "records": (("Compare values", "compare"), ("Ask about this test", "assistant"),
+                    ("View test context", "effect")),
+        "compare": (("Inspect measurements", "records"), ("Ask about this test", "assistant"),
+                    ("Explore solutions", "lab")),
+        "assistant": (("Inspect measurements", "records"), ("Explore solutions", "lab"),
+                      ("View test context", "effect")),
+        "lab": (("Inspect measurements", "records"), ("Ask about this test", "assistant"),
+                ("View test context", "effect")),
+        "effect": (("Inspect measurements", "records"), ("Compare values", "compare"),
+                   ("Ask about this test", "assistant")),
+    }
+    available = actions[workspace]
+    columns = st.columns(len(available))
+    for column, (label, target) in zip(columns, available):
+        with column:
+            if st.button(label, key=f"journey_{workspace}_{target}", width="stretch"):
+                follow_experiment(experiment_id, destination=target)
+
+
 def explorer():
     try:
         store = ResearchStore()
@@ -114,6 +198,11 @@ def explorer():
         with art:
             html(f'<figure class="hero-art"><img src="data:image/jpeg;base64,{astronaut_data}" alt="NASA International Space Apps Challenge artwork with astronaut"><figcaption>Supplied Space Apps Challenge artwork · original branding preserved</figcaption></figure>')
         html(f'<div class="statusline"><b>VERIFIED RESEARCH</b> &nbsp;·&nbsp; {audit["experiments"]} report-extracted FLEX tests &nbsp;·&nbsp; {audit["passages"]} searchable PDF pages &nbsp;·&nbsp; {audit["documentary_notes"]} documentary notes &nbsp;·&nbsp; {audit["sources"]} catalogued sources</div>')
+        example = next((row for row in store.experiments(investigation_id="FLEX", test_query="054", limit=5)
+                        if row["original_test_id"].endswith("054")), None)
+        if example and st.button("Start with a verified FLEX experiment", type="primary"):
+            follow_experiment(example["id"], destination="records")
+        st.caption("Suggested path: inspect FLEX test 054, compare its reported measurements, then ask a source-linked question.")
         html('<div class="section-title">Discover research</div>')
         search = st.text_input("Search sources, report pages, and documentary notes", placeholder="Try FLEX, Mir, oxygen, or smoke")
         domains = {row["id"]: row["label"] for row in store.domains()}
@@ -124,11 +213,15 @@ def explorer():
         topic_names = {row["id"]: row["label"] for row in topics}
         with middle:
             topic = st.selectbox("Scientific topic", [None, *topic_names], format_func=lambda key: topic_names.get(key, "All topics"))
+            if topic is not None:
+                st.session_state["active_topic"] = topic
         investigations = store.investigations(domain)
         investigation_names = {row["id"]: row["name"] for row in investigations}
         with right:
             investigation = st.selectbox("Investigation", [None, *investigation_names],
                                          format_func=lambda key: investigation_names.get(key, "All investigations"))
+            if investigation is not None:
+                st.session_state["active_investigation"] = investigation
 
         if investigations:
             html('<div class="section-title">Investigation availability</div>')
@@ -152,6 +245,7 @@ def explorer():
             if coverage["admitted_experiments"]:
                 if st.button(f"Open {investigation} experiments", type="primary"):
                     st.session_state["records_investigation"] = investigation
+                    st.session_state["active_investigation"] = investigation
                     st.switch_page(pages[1])
 
         hits = []
@@ -178,9 +272,9 @@ def explorer():
                 {
                     "Source": item["title"],
                     "Investigation": item["investigation_id"] or "—",
-                    "Kind": item["source_type"],
-                    "Verification": item["verification_status"],
-                    "Availability": item["admission_status"],
+                    "Kind": SOURCE_LABELS.get(item["source_type"], item["source_type"].replace("_", " ").title()),
+                    "Verification": SOURCE_LABELS.get(item["verification_status"], item["verification_status"].replace("_", " ").title()),
+                    "Availability": SOURCE_LABELS.get(item["admission_status"], item["admission_status"].replace("_", " ").title()),
                 }
                 for item in sources
             ]), hide_index=True, width="stretch")
@@ -192,7 +286,8 @@ def explorer():
             with detail:
                 st.markdown(f'**{source["title"]}**')
                 st.caption(f'Identifier: {source["identifier"] or "Not supplied"} · Publisher: {source["publisher"]}')
-                st.caption(f'Verification: {source["verification_status"]} · Rights: {source["rights_status"]} · Admission: {source["admission_status"]}')
+                with st.expander("Verification, rights and source status"):
+                    st.caption(f'Verification: {source["verification_status"]} · Rights: {source["rights_status"]} · Admission: {source["admission_status"]}')
                 for evidence in store.source_evidence(chosen):
                     st.write(f'{evidence["source_location"]}: {evidence["summary"]}')
                 for note in store.documentary_notes(source_key=chosen):
@@ -237,38 +332,43 @@ def records():
         requested = st.session_state.pop("records_investigation", None)
         if requested in ids:
             st.session_state["record_family"] = requested
-        investigation = st.selectbox("Investigation", ids, index=ids.index("FLEX"), key="record_family")
+        elif "record_family" not in st.session_state and st.session_state.get("active_investigation") in ids:
+            st.session_state["record_family"] = st.session_state["active_investigation"]
+        st.session_state.setdefault("record_family", "FLEX")
+        investigation = st.selectbox("Investigation", ids, key="record_family")
+        st.session_state["active_investigation"] = investigation
+        if investigation != "FLEX":
+            st.session_state.pop("active_experiment", None)
         scope = store.coverage(investigation)
         st.caption(scope["coverage_note"])
 
         if scope["admitted_experiments"]:
+            target = st.session_state.pop("record_target", None)
+            if target:
+                record_target = store.experiment(target)
+                if record_target["investigation_id"] == investigation and record_target["validation_status"] == "VALIDATED":
+                    st.session_state["record_query"] = record_target["original_test_id"]
+                    st.session_state["record_fuel"] = "All fuels"
+                    st.session_state["record_oxygen_on"] = False
+                    st.session_state["record_pressure_on"] = False
+                    st.session_state["record_choice"] = target
             html('<div class="section-title">Filter verified experiments</div>')
             search, fuel_col, measure_col = st.columns([1.4, 1, 1.3], gap="small")
             with search:
-                test_query = st.text_input("Test ID contains", placeholder="Example: FLEX–130")
+                test_query = st.text_input("Test ID contains", placeholder="Example: FLEX–130", key="record_query")
             with fuel_col:
-                fuel = st.selectbox("Fuel", ["All fuels", *store.fuels(investigation)])
-            variable_names = {
-                "pressure_mmhg": "Atmospheric pressure · mmHg",
-                "oxygen_mole_fraction": "Oxygen mole fraction",
-                "nitrogen_mole_fraction": "Nitrogen mole fraction",
-                "carbon_dioxide_mole_fraction": "Carbon dioxide mole fraction",
-                "helium_mole_fraction": "Helium mole fraction",
-                "initial_diameter_mm": "Initial droplet diameter · mm",
-                "visible_extinction_diameter_mm": "Visible extinction diameter · mm",
-                "burning_rate_mm2_s": "Burning-rate constant · mm²/s",
-                "burn_time_s": "Burn duration · s",
-            }
+                fuel = st.selectbox("Fuel", ["All fuels", *store.fuels(investigation)], key="record_fuel")
+            variable_names = MEASURE_LABELS
             with measure_col:
                 variable = st.selectbox("Measurement column", list(variable_names),
                                         format_func=lambda key: variable_names[key])
             oxygen_filter, pressure_filter = st.columns(2, gap="medium")
             with oxygen_filter:
-                use_oxygen = st.checkbox("Filter oxygen mole fraction")
+                use_oxygen = st.checkbox("Filter oxygen mole fraction", key="record_oxygen_on")
                 oxygen_range = st.slider("O₂ mole fraction", 0.0, 1.0, (0.12, 0.34), 0.01,
                                          disabled=not use_oxygen)
             with pressure_filter:
-                use_pressure = st.checkbox("Filter pressure (mmHg)")
+                use_pressure = st.checkbox("Filter pressure (mmHg)", key="record_pressure_on")
                 pressure_range = st.slider("Pressure · mmHg", 0.0, 2400.0,
                                            (500.0, 2350.0), 10.0, disabled=not use_pressure)
             try:
@@ -320,14 +420,24 @@ def records():
                     st.caption(f"CSV contains all {len(matches)} filtered, report-extracted records.")
                 html('<div class="section-title">Experiment detail</div>')
                 choices = {row["id"]: row["original_test_id"] for row in visible}
+                if st.session_state.get("record_choice") not in choices:
+                    st.session_state.pop("record_choice", None)
                 chosen = st.selectbox("Inspect a test", list(choices),
-                                      format_func=lambda key: choices[key])
+                                      format_func=lambda key: choices[key], key="record_choice")
+                st.session_state["active_experiment"] = chosen
                 experiment = store.experiment(chosen)
                 provenance = store.provenance(chosen)
                 a, b = st.columns([1.5, 1], gap="large")
                 with a:
-                    st.markdown(f'**{experiment["original_test_id"]} · {experiment["fuel"]}**')
-                    st.caption(f'Date {experiment["test_date"]} · GMT {experiment["gmt"]} · Reported outcome: {experiment["test_end"]}')
+                    st.markdown(f'**{experiment["original_test_id"]} · {experiment["fuel"]} · {experiment["test_end"]}**')
+                    st.caption(f'Reported test outcome · {experiment["test_date"]} at {experiment["gmt"]} GMT')
+                    key_measurements = {measure["variable"]: measure for measure in experiment["measurements"]}
+                    summary = st.columns(3)
+                    for column, variable in zip(summary, ("initial_diameter_mm", "burning_rate_mm2_s", "burn_time_s")):
+                        measure = key_measurements[variable]
+                        value = ("Unavailable" if measure["classification"] == "UNAVAILABLE"
+                                 else f'{measure["original_value"]} {measure["original_unit"]}')
+                        column.metric(MEASURE_LABELS[variable].split(" · ")[0], value)
                     measurement_rows = []
                     for measure in experiment["measurements"]:
                         token = measure["original_value"]
@@ -342,15 +452,18 @@ def records():
                             "Uncertainty": measure["uncertainty"] or "Not reported in Table IX",
                             "PDF page": measure["page"],
                         })
-                    st.dataframe(pd.DataFrame(measurement_rows), hide_index=True, width="stretch")
-                    st.caption("A source dash remains unavailable; no zero or estimate is inserted.")
+                    with st.expander("All original measurement cells, units and uncertainties"):
+                        st.dataframe(pd.DataFrame(measurement_rows), hide_index=True, width="stretch")
+                        st.caption("A source dash remains unavailable; no zero or estimate is inserted.")
                 with b:
                     st.markdown("**Source provenance**")
                     st.write(provenance["source_title"])
                     st.caption(f'NASA report · PDF page {provenance["first_pdf_page"]} · printed page {provenance["first_pdf_page"] - 6} · Appendix A, Table IX')
-                    st.caption(f'Data origin: {provenance["data_origin"]} · Validation: {provenance["validation_status"]}')
-                    st.caption(f'Rights: {provenance["source_rights"]} · SHA-256: {provenance["source_sha256"]}')
                     st.link_button("Open NASA source report", provenance["source_url"])
+                    with st.expander("Verification and rights details"):
+                        st.caption(f'Data origin: {provenance["data_origin"]} · Validation: {provenance["validation_status"]}')
+                        st.caption(f'Rights: {provenance["source_rights"]} · SHA-256: {provenance["source_sha256"]}')
+                journey_context(store, "records")
             else:
                 st.info("No validated tests match these filters. Adjust the conditions or choose another investigation.")
         else:
@@ -401,6 +514,8 @@ def compare():
         st.error(f"Verified research database unavailable: {exc}")
         st.stop()
     with store:
+        st.session_state["active_investigation"] = "FLEX"
+        journey_context(store, "compare")
         st.caption("Scope: FLEX · NASA/TP-2015-216046 Appendix A, Table IX · NASA_REPORT_EXTRACTED · historical report values, not live telemetry")
         labels = {
             "pressure_mmhg": "Atmospheric pressure",
@@ -414,9 +529,15 @@ def compare():
             "burn_time_s": "Burn duration",
         }
         conditions, axes = st.columns([1, 1], gap="large")
+        compare_target = st.session_state.pop("compare_target", None)
+        if compare_target:
+            st.session_state["compare_fuel"] = "All fuels"
+            st.session_state["compare_oxygen_on"] = False
+            st.session_state["compare_pressure_on"] = False
+            st.session_state["compare_tests"] = [compare_target]
         with conditions:
             html('<div class="section-title">Experimental conditions</div>')
-            fuel = st.selectbox("Fuel", ["All fuels", *store.fuels()])
+            fuel = st.selectbox("Fuel", ["All fuels", *store.fuels()], key="compare_fuel")
             use_oxygen = st.checkbox("Limit oxygen mole fraction", key="compare_oxygen_on")
             oxygen_range = st.slider("O₂ mole fraction", 0.0, 1.0, (0.12, 0.34), 0.01,
                                      disabled=not use_oxygen, key="compare_oxygen")
@@ -441,9 +562,13 @@ def compare():
             pressure_max=pressure_range[1] if use_pressure else None, limit=500,
         )
         names = {row["id"]: row["original_test_id"] for row in available}
+        if "compare_tests" in st.session_state:
+            st.session_state["compare_tests"] = [key for key in st.session_state["compare_tests"] if key in names]
         selected = st.multiselect("Limit to specific FLEX tests (optional)", list(names),
                                   format_func=lambda key: names[key],
-                                  placeholder="All matching validated tests")
+                                  placeholder="All matching validated tests", key="compare_tests")
+        if selected:
+            st.session_state["active_experiment"] = selected[-1]
         if x_var == y_var:
             st.info("Choose different measurements for the horizontal and vertical axes.")
             return
@@ -500,15 +625,18 @@ def compare():
             st.caption("Descriptive scatter of reported values only. Colour groups fuels; symbols show the report's test outcome. No causal fit or prediction is implied.")
 
             html('<div class="section-title">Distribution by fuel</div>')
-            distribution = px.box(plot, x="fuel", y="y_numeric_value", color="fuel",
+            if len(plot) >= 3:
+                distribution = px.box(plot, x="fuel", y="y_numeric_value", color="fuel",
                                   color_discrete_sequence=["#72dce2", "#f2a16e", "#9ca9ff", "#b5dc8c"],
                                   labels={"fuel": "Fuel", "y_numeric_value": f"{labels[y_var]} ({comparison.y_unit})"})
-            distribution.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+                distribution.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
                                        font_color="#dbe9ec", showlegend=False,
                                        margin=dict(l=20, r=20, t=25, b=20), height=340)
-            distribution.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
-            st.plotly_chart(distribution, width="stretch")
-            st.caption("Box summaries are calculated from the plotted subset with Pandas and Plotly; they are not values printed in the NASA report.")
+                distribution.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
+                st.plotly_chart(distribution, width="stretch")
+                st.caption("Box summaries are calculated from the plotted subset with Pandas and Plotly; they are not values printed in the NASA report.")
+            else:
+                st.caption("Choose at least three plotted tests to see a distribution summary.")
 
         html('<div class="section-title">Comparability and limits</div>')
         differences = []
@@ -631,18 +759,25 @@ def evidence_items(packet, *, compact=False):
 def lab():
     heading("03 / ENGINEERING RESEARCH", "Solution Lab",
             "Frame a fire-safety research question and inspect admitted evidence before recording design considerations.")
+    with ResearchStore() as store:
+        journey_context(store, "lab")
     question, context = st.columns([1.5, 1], gap="large")
     with question:
         html('<div class="step">01 / DEFINE THE PROBLEM</div>')
-        problem = st.text_area("Research problem", placeholder="Example: What evidence informs oxygen-sensitive flame extinction in FLEX?", height=145)
+        if "lab_problem" not in st.session_state and st.session_state.get("active_question"):
+            st.session_state["lab_problem"] = st.session_state["active_question"]
+        problem = st.text_area("Research problem", placeholder="Example: What evidence informs oxygen-sensitive flame extinction in FLEX?", height=145, key="lab_problem")
     with context:
         html('<div class="step">02 / SET THE CONTEXT</div>')
+        if "lab_investigation" not in st.session_state:
+            st.session_state["lab_investigation"] = st.session_state.get("active_investigation")
         investigation = st.selectbox("Investigation focus", [None, "FLEX", "BASS-II", "SAFFIRE", "SAME", "SPICE"],
-                                     format_func=lambda key: key or "Route from question")
+                                     format_func=lambda key: key or "Route from question", key="lab_investigation")
         st.caption("Only approved passages, objective summaries and validated records are retrieved.")
     if st.button("Gather research evidence", type="primary"):
         try:
             packet = load_evidence(problem, investigation=investigation)
+            st.session_state["active_question"] = problem
             with st.spinner("Checking the selected research evidence..."):
                 st.session_state["lab_result"] = optional_answer(packet)
             st.session_state["lab_question"] = problem
@@ -676,6 +811,8 @@ def lab():
 def assistant():
     heading("04 / EVIDENCE-LED DIALOGUE", "AI Research Assistant",
             "Ask research questions, inspect original sources, and use optional source-checked explanations when the provider is configured.")
+    with ResearchStore() as store:
+        journey_context(store, "assistant")
     if not ai_adapter().settings.configured:
         st.info("Generative mode is unavailable without an owner-configured key. Verified evidence mode is ready; visitors do not need an API key.")
     conversation, evidence = st.columns([1.35, 1], gap="large")
@@ -690,22 +827,30 @@ def assistant():
                 else:
                     answer_status(message["result"])
                     st.caption("Open the evidence inspector for source locations and any reported measurement cells.")
-        prompt = st.text_input("Research question", placeholder="Ask about FLEX, BASS-II, smoke detection, or a specific test")
+        if st.session_state.pop("assistant_target", False):
+            st.session_state["assistant_prompt"] = st.session_state.get("active_question", "")
+            st.session_state["assistant_scope"] = st.session_state.get("active_investigation")
+        prompt = st.text_input("Research question", placeholder="Ask about FLEX, BASS-II, smoke detection, or a specific test", key="assistant_prompt")
         with ResearchStore() as store:
             topic_labels = {row["id"]: row["label"] for row in store.topics()}
+        if "assistant_topic" not in st.session_state and st.session_state.get("active_topic") in topic_labels:
+            st.session_state["assistant_topic"] = st.session_state["active_topic"]
         scope_col, topic_col = st.columns(2, gap="small")
         with scope_col:
             scope = st.selectbox("Investigation scope", [None, "FLEX", "BASS-II", "SAFFIRE", "SAME", "SPICE"],
-                                 format_func=lambda key: key or "Route from question")
+                                 format_func=lambda key: key or "Route from question", key="assistant_scope")
         with topic_col:
             topic = st.selectbox("Topic scope", [None, *topic_labels],
-                                 format_func=lambda key: topic_labels.get(key, "Route from question"))
+                                 format_func=lambda key: topic_labels.get(key, "Route from question"), key="assistant_topic")
         remaining = max(0, ai_adapter().settings.session_request_limit - st.session_state.get("ai_request_count", 0))
         if ai_adapter().settings.configured:
             st.caption(f"AI requests remaining this session: {remaining}")
         if st.button("Ask and inspect", type="primary"):
             try:
                 packet = load_evidence(prompt, investigation=scope, topic=topic)
+                st.session_state["active_question"] = prompt
+                if topic is not None:
+                    st.session_state["active_topic"] = topic
                 history = tuple(m["text"] for m in st.session_state["research_chat"] if m["role"] == "user")[-2:]
                 with st.spinner("Retrieving and checking source evidence..."):
                     result = optional_answer(packet, history=history)
@@ -735,19 +880,27 @@ def effect():
         with ResearchStore() as store:
             tests = store.experiments(investigation_id="FLEX", limit=500)
             by_id = {row["id"]: row for row in tests}
+            target = st.session_state.pop("effect_target", None)
+            if target in by_id:
+                st.session_state["effect_choice"] = target
             with control:
                 html('<div class="section-title" style="margin-top:0">Verified test context</div>')
                 chosen = st.selectbox("Inspect a FLEX test", list(by_id),
-                                      format_func=lambda key: by_id[key]["original_test_id"])
+                                      format_func=lambda key: by_id[key]["original_test_id"], key="effect_choice")
+                st.session_state["active_investigation"] = "FLEX"
+                st.session_state["active_experiment"] = chosen
                 row = by_id[chosen]
                 st.write(f'**{row["original_test_id"]} · {row["fuel"]}**')
                 st.caption(f'O₂ mole fraction {row["oxygen_mole_fraction"]} · pressure {row["pressure_mmhg"]} mmHg · reported outcome {row["test_end"]}')
                 st.link_button("NASA report and source record", row["source_url"])
             with context:
                 html('<div class="section-title" style="margin-top:0">Research evidence</div>')
-                packet = load_evidence("FLEX flame extinction")
-                evidence_items({**packet, "items": packet["items"][:2]}, compact=True)
+                number = row["original_test_id"][-3:]
+                packet = load_evidence(f"What measurements and outcome did FLEX test {number} report?", investigation="FLEX")
+                evidence_items({**packet, "items": [item for item in packet["items"]
+                                                      if item.get("experiment_id") == row["original_test_id"]]}, compact=True)
                 st.caption("The artwork does not depict the selected test. No authentic experimental footage is admitted to this view; no simulation is calculated.")
+            journey_context(store, "effect")
     except (OSError, ResearchError, ValueError) as exc:
         st.error(f"Research context unavailable: {exc}")
 

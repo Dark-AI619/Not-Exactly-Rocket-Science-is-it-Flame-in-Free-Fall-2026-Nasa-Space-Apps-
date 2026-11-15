@@ -22,6 +22,8 @@ The Phase 4E release candidate is on `phase3-integration`. It has **not** been m
 
 The app works in evidence-only mode without secrets. An owner may set `GROQ_API_KEY` privately for optional generation. The non-secret settings in `.env.example` control model, maximum output tokens, timeout and per-session request limit. Do not commit `.env`, `.streamlit/secrets.toml`, or a live key. The per-session limit cannot protect one shared free quota from many separate visitors; public launch would need a separate global budget or abuse-control service. Free inference availability and model access can change. No paid billing is required or enabled by this repository.
 
+Phase 5 Pass A adds a connected path from a verified FLEX test through its measurements, descriptive comparison, source-linked question, Solution Lab, and test-aware visual context. The mathematical simulation belongs to Pass B and is not yet present. See `research/PHASE5A_REPORT.md` for the local browser journey and remaining work.
+
 ## Research status
 
 Phase 1 produced a separately preserved, validated transcription subset of FLEX Table IX from [NASA/TP-2015-216046](https://ntrs.nasa.gov/citations/20150023456). Checkpoint 3C reads that subset: 273 validated report-extracted tests and 2,457 original measurement cells. The catalogue now includes 329 searchable PDF page passages, 10 short source-linked documentary notes and 25 sources. BASS-II, SAME-R, and Saffire have no admitted numerical experiment rows. NASA PSI investigation pages are research sources, including [FLEX PSI-69](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69). Original units, source pages, rights, and uncertainty are retained.

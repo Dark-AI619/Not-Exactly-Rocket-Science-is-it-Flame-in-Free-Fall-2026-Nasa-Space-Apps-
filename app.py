@@ -542,8 +542,8 @@ def compare():
         st.caption("A dash in an original value remains unavailable. Each row preserves its original token, unit, classification and PDF page.")
 
 
-@st.cache_data(show_spinner=False, max_entries=64)
-def cached_evidence(question, investigation=None, domain=None, topic=None):
+def load_evidence(question, investigation=None, domain=None, topic=None):
+    """Retrieve public evidence per request without caching visitors' questions."""
     with ResearchStore() as store:
         return retrieve_evidence(store, question, investigation_id=investigation,
                                  domain_id=domain, topic_id=topic)
@@ -564,7 +564,7 @@ def optional_answer(packet, *, history=()):
 
 def answer_status(result, *, show_evidence_summary=True):
     if result.mode == "model":
-        st.caption("AI explanation · each statement passed citation and numerical checks; inspect sources below.")
+        st.caption("AI explanation · automated citation and value checks passed; review the original sources below.")
         for claim in result.claims:
             st.write(claim)
         return
@@ -642,7 +642,7 @@ def lab():
         st.caption("Only approved passages, objective summaries and validated records are retrieved.")
     if st.button("Gather research evidence", type="primary"):
         try:
-            packet = cached_evidence(problem, investigation=investigation)
+            packet = load_evidence(problem, investigation=investigation)
             with st.spinner("Checking the selected research evidence..."):
                 st.session_state["lab_result"] = optional_answer(packet)
             st.session_state["lab_question"] = problem
@@ -705,7 +705,7 @@ def assistant():
             st.caption(f"AI requests remaining this session: {remaining}")
         if st.button("Ask and inspect", type="primary"):
             try:
-                packet = cached_evidence(prompt, investigation=scope, topic=topic)
+                packet = load_evidence(prompt, investigation=scope, topic=topic)
                 history = tuple(m["text"] for m in st.session_state["research_chat"] if m["role"] == "user")[-2:]
                 with st.spinner("Retrieving and checking source evidence..."):
                     result = optional_answer(packet, history=history)
@@ -745,7 +745,7 @@ def effect():
                 st.link_button("NASA report and source record", row["source_url"])
             with context:
                 html('<div class="section-title" style="margin-top:0">Research evidence</div>')
-                packet = cached_evidence("FLEX flame extinction")
+                packet = load_evidence("FLEX flame extinction")
                 evidence_items({**packet, "items": packet["items"][:2]}, compact=True)
                 st.caption("The artwork does not depict the selected test. No authentic experimental footage is admitted to this view; no simulation is calculated.")
     except (OSError, ResearchError, ValueError) as exc:

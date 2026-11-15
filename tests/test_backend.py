@@ -19,7 +19,7 @@ def store():
 def test_integrity_and_coverage(store):
     assert validate_database(store) == {
         "experiments": 273, "measurements": 2457, "passages": 329,
-        "sources": 23, "status": "VALIDATED_SUBSET",
+        "documentary_notes": 10, "sources": 25, "status": "VALIDATED_SUBSET",
     }
     assert len(store.domains()) == 6
     assert len(store.topics("combustion")) >= 8

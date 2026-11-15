@@ -113,9 +113,9 @@ def explorer():
             html('<div class="hero-copy"><div class="eyebrow">NASA SPACE APPS CHALLENGE 2026 · RESEARCH EXPLORER</div><h1>Flame in<br><span style="color:#f0a16d">Freefall.</span></h1><p class="lede">Explore the evidence behind combustion and fire safety in microgravity. Follow original investigations, examine what was measured, and keep scientific limits in view.</p><span class="smallcaps">DISCOVER / INSPECT / REASON</span></div>')
         with art:
             html(f'<figure class="hero-art"><img src="data:image/jpeg;base64,{astronaut_data}" alt="NASA International Space Apps Challenge artwork with astronaut"><figcaption>Supplied Space Apps Challenge artwork · original branding preserved</figcaption></figure>')
-        html(f'<div class="statusline"><b>VERIFIED RESEARCH</b> &nbsp;·&nbsp; {audit["experiments"]} report-extracted FLEX tests &nbsp;·&nbsp; {audit["passages"]} searchable PDF pages &nbsp;·&nbsp; {audit["sources"]} catalogued sources</div>')
+        html(f'<div class="statusline"><b>VERIFIED RESEARCH</b> &nbsp;·&nbsp; {audit["experiments"]} report-extracted FLEX tests &nbsp;·&nbsp; {audit["passages"]} searchable PDF pages &nbsp;·&nbsp; {audit["documentary_notes"]} documentary notes &nbsp;·&nbsp; {audit["sources"]} catalogued sources</div>')
         html('<div class="section-title">Discover research</div>')
-        search = st.text_input("Search sources and report passages", placeholder="Try FLEX, droplet, oxygen, or smoke")
+        search = st.text_input("Search sources, report pages, and documentary notes", placeholder="Try FLEX, Mir, oxygen, or smoke")
         domains = {row["id"]: row["label"] for row in store.domains()}
         left, middle, right = st.columns(3, gap="small")
         with left:
@@ -155,15 +155,20 @@ def explorer():
                     st.switch_page(pages[1])
 
         hits = []
+        documentary_hits = []
         if search.strip():
             try:
-                hits = store.passages(search.strip(), investigation_id=investigation, topic_id=topic, limit=5)
+                if domain in (None, "combustion", "detection"):
+                    hits = store.passages(search.strip(), investigation_id=investigation, topic_id=topic, limit=5)
+                if investigation is None and domain in (None, "historical", "background", "transfer"):
+                    documentary_hits = store.documentary_notes(search.strip(), domain_id=domain,
+                                                                 topic_id=topic, limit=5)
             except ResearchError as exc:
                 st.warning(str(exc))
         sources = store.sources(investigation_id=investigation, domain_id=domain, topic_id=topic)
         if search.strip():
             query = search.strip().casefold()
-            hit_urls = {hit["source_url"] for hit in hits}
+            hit_urls = {hit["source_url"] for hit in [*hits, *documentary_hits]}
             sources = [item for item in sources if query in item["title"].casefold()
                        or query in (item["identifier"] or "").casefold()
                        or item["url"] in hit_urls]
@@ -190,6 +195,8 @@ def explorer():
                 st.caption(f'Verification: {source["verification_status"]} · Rights: {source["rights_status"]} · Admission: {source["admission_status"]}')
                 for evidence in store.source_evidence(chosen):
                     st.write(f'{evidence["source_location"]}: {evidence["summary"]}')
+                for note in store.documentary_notes(source_key=chosen):
+                    st.write(f'{note["source_location"]}: {note["summary"]}')
             with action:
                 st.link_button("Open original source", source["url"])
         else:
@@ -203,8 +210,15 @@ def explorer():
                         st.write(hit["excerpt"])
                         st.link_button("Open source record", hit["source_url"])
                         st.caption("PDF text supports discovery; verify numerical details against the printed table.")
-            else:
+            elif not documentary_hits:
                 st.caption("No approved PDF passage matches the current search and scope.")
+            if documentary_hits:
+                html('<div class="section-title">Matching documentary evidence</div>')
+                for note in documentary_hits:
+                    with st.expander(f'{note["source_title"]} · {note["source_location"]}'):
+                        st.write(note["summary"])
+                        st.caption(f'Factual paraphrase · {note["rights_basis"]} · checked {note["checked_on"]}')
+                        st.link_button("Open official source", note["source_url"])
         st.caption("NASA is a research source; it does not operate or endorse this independent dashboard.")
 
 
@@ -585,7 +599,10 @@ def evidence_summary(packet):
     st.caption(f'DETERMINISTIC EVIDENCE SUMMARY · {route["domain"].upper()} · {route["intent"].upper()} · not an LLM-generated answer')
     if packet["supported"]:
         count = sum(item["kind"] != "source_pointer" for item in packet["items"])
-        st.write(f"Found {count} admitted evidence item(s) in the selected scope. Read the source excerpts and original measurements below; they are not a causal conclusion.")
+        if all(item["kind"] == "documentary_note" for item in packet["items"]):
+            st.write(f"Found {count} admitted documentary note(s). Inspect each official source in the evidence panel; these are factual summaries, not experiment measurements.")
+        else:
+            st.write(f"Found {count} admitted evidence item(s) in the selected scope. Read the source excerpts and original measurements below; they are not a causal conclusion.")
     for note in packet["notices"]:
         st.warning(note)
     for expansion in packet["expansions"]:
@@ -672,7 +689,7 @@ def assistant():
                     st.write(message["text"])
                 else:
                     answer_status(message["result"])
-                    st.caption("Open the evidence inspector for the exact source passages and measurement cells.")
+                    st.caption("Open the evidence inspector for source locations and any reported measurement cells.")
         prompt = st.text_input("Research question", placeholder="Ask about FLEX, BASS-II, smoke detection, or a specific test")
         with ResearchStore() as store:
             topic_labels = {row["id"]: row["label"] for row in store.topics()}

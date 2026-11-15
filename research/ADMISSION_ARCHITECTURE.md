@@ -1,18 +1,9 @@
-# Future research admission architecture — design only
+# Controlled research admission
 
-Phase 3E does not admit external sources, write to the approved corpus, or expose a public **Add Research** control. A future admission service requires a verified discovery provider, authenticated reviewer roles, durable staging storage and an approval policy before deployment.
+Phase 4D has a small curated admission path and a separate local preparation queue. There is no public **Add Research** control, unattended web ingestion, or production review account.
 
-The proposed sequence is:
+The curated Phase 4D manifest at `research/phase4d_admissions.json` records each official page, exact section, short factual paraphrase, topic and rights basis. `migrations/phase4d.py` checks official source identity, topic/domain alignment, duplicate locations and summary hashes; it creates a version and audit record, verifies original scientific row hashes, and writes a separate output archive. Existing PDF passages and experiment measurements are untouched. This is a one-time, source-compared development-corpus migration, not an open approval endpoint.
 
-1. Discover a candidate from an allowlisted official source connector and record its stable URL, publisher, identifier and retrieval time.
-2. Resolve source identity against official metadata; store a content hash and immutable original file in staging.
-3. Record license/rights evidence and the permitted use of text, tables and media. Unknown rights stay blocked.
-4. Check domain, investigation and topic relevance. Separate descriptive background, historical incidents and original experiment data.
-5. Extract source passages or measurement tables with exact page/section and original values/units; record extraction method and uncertainty.
-6. Detect duplicate sources and overlapping test identifiers using stable IDs, URLs and hashes.
-7. Run schema, unit, range, provenance, missing-value and source-link validation. Any mismatch enters a review queue.
-8. Require a human reviewer to inspect the original source and approve each admission decision. An LLM assertion cannot satisfy identity, rights or scientific validation.
-9. Commit an append-only corpus version with transaction boundaries, reviewer identity, timestamps and an audit log of changed records.
-10. Retain prior immutable versions and provide an authorized rollback that changes the active version pointer while preserving audit history.
+For future requests, the assistant may identify a candidate official source, but only a maintainer can run `scripts/stage_research.py candidate.json` to record its URL, title, domain and topic in a local `work/research_review_queue.jsonl`. The queue marks rights as unconfirmed and content as pending scientific review. Duplicate URLs are rejected. Rejected candidates remain outside the corpus. No model confidence, staged URL or downloaded page is enough for admission.
 
-Only after a successful durable admission should the interface notify users that new verified research was added. Discovery, staging and pending review must never show that success message. Production credentials, reviewer controls and automated admission remain Step 4 work.
+Before any later source is admitted, a human reviewer must inspect the official original, record usage rights and media restrictions, preserve a source snapshot and hash where lawful, extract exact passages or tables with location and units, check duplicates and scientific context, and approve a new versioned manifest. The migration must then pass integrity, citation, category, rights, search-index and regression checks. Production use also needs durable storage, reviewer identity and rollback controls; the current local queue does not supply them. Only a successfully published, durable corpus update may trigger an in-app “new verified research” notice.

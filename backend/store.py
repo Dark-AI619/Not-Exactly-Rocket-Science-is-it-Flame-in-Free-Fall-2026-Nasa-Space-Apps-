@@ -171,6 +171,41 @@ class ResearchStore:
                FROM catalogue_evidence WHERE catalogue_key=? ORDER BY id""", (key,)
         ))
 
+    def documentary_notes(
+        self, query: str | None = None, *, domain_id: str | None = None,
+        source_key: str | None = None, topic_id: str | None = None, limit: int = 20,
+    ) -> list[dict]:
+        """Search admitted factual paraphrases; catalogue-only pages stay excluded."""
+        sql = """SELECT d.id,d.source_key,d.source_location,d.summary,d.topic_id,
+                        d.rights_basis,d.rights_guidance_url,d.checked_on,
+                        c.title AS source_title,c.identifier AS source_identifier,
+                        c.url AS source_url,c.domain_id,c.verification_status
+                 FROM documentary_evidence d
+                 JOIN source_catalogue c ON c.key=d.source_key"""
+        params: list = []
+        if query is not None:
+            terms = re.findall(r"[\w]+", query, re.UNICODE)
+            if not terms or len(terms) > 12 or len(query) > 200:
+                raise ResearchError("search requires 1–12 plain terms and at most 200 characters")
+            sql += " JOIN documentary_evidence_fts f ON f.rowid=d.id"
+            params.append(" AND ".join(f'"{term}"' for term in terms))
+            sql += " WHERE documentary_evidence_fts MATCH ?"
+        else:
+            sql += " WHERE 1=1"
+        sql += " AND c.admission_status='DOCUMENTARY_ADMITTED' AND c.rights_status='NASA_WEB_FACT_PARAPHRASE_ONLY'"
+        if domain_id is not None:
+            sql += " AND c.domain_id=?"
+            params.append(domain_id)
+        if source_key is not None:
+            sql += " AND d.source_key=?"
+            params.append(source_key)
+        if topic_id is not None:
+            sql += " AND d.topic_id=?"
+            params.append(topic_id)
+        sql += " ORDER BY d.id LIMIT ?"
+        params.append(_bound(limit, 100))
+        return _rows(self.db.execute(sql, params))
+
     def experiments(
         self, *, investigation_id: str | None = None, fuel: str | None = None,
         test_query: str | None = None, oxygen_min: float | None = None,
@@ -354,6 +389,12 @@ def validate_database(store: ResearchStore) -> dict:
             problems.append(f"unexpected {table} count")
     if db.execute("SELECT count(*) FROM passages_fts").fetchone()[0] != 329:
         problems.append("FTS5 index count differs from passages")
+    if db.execute("SELECT count(*) FROM documentary_evidence").fetchone()[0] != 10:
+        problems.append("unexpected documentary evidence count")
+    if db.execute("SELECT count(*) FROM documentary_evidence_fts").fetchone()[0] != 10:
+        problems.append("documentary FTS5 index count differs from evidence")
+    if db.execute("SELECT count(*) FROM source_catalogue").fetchone()[0] != 25:
+        problems.append("unexpected source catalogue count")
     if db.execute("SELECT count(*) FROM experiments WHERE data_origin!='NASA_REPORT_EXTRACTED' OR validation_status!='VALIDATED'").fetchone()[0]:
         problems.append("unapproved experiment origin or status")
     if db.execute("SELECT count(*) FROM measurements WHERE classification='UNAVAILABLE' AND numeric_value IS NOT NULL").fetchone()[0]:
@@ -410,8 +451,19 @@ def validate_database(store: ResearchStore) -> dict:
         WHERE c.rights_status<>'CC0-1.0' OR c.verification_status<>'VERIFIED_METADATA'
     """).fetchone()[0]:
         problems.append("unapproved catalogue evidence")
+    if db.execute("""SELECT count(*) FROM documentary_evidence d JOIN source_catalogue c
+        ON c.key=d.source_key WHERE c.admission_status!='DOCUMENTARY_ADMITTED'
+        OR c.rights_status!='NASA_WEB_FACT_PARAPHRASE_ONLY'
+        OR d.rights_basis!='NASA_WEB_FACT_PARAPHRASE_ONLY'
+        OR d.verification_status!='SOURCE_CHECKED'""").fetchone()[0]:
+        problems.append("unapproved documentary evidence")
+    if db.execute("SELECT count(*) FROM admission_audit WHERE decision='ADMITTED_CURATED'").fetchone()[0] != 10:
+        problems.append("documentary admission audit mismatch")
+    if db.execute("SELECT count(*) FROM source_catalogue WHERE admission_status='CATALOGUE_ONLY' AND key IN ('NASA-ACME','NASA-FLEX-2')").fetchone()[0] != 2:
+        problems.append("unadmitted science pointers missing")
     if problems:
         raise ResearchError("; ".join(problems))
     return {"experiments": 273, "measurements": 2457, "passages": 329,
+            "documentary_notes": 10,
             "sources": db.execute("SELECT count(*) FROM source_catalogue").fetchone()[0],
             "status": "VALIDATED_SUBSET"}

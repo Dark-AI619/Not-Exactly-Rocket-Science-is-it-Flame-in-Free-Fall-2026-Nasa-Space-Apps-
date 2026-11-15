@@ -50,12 +50,15 @@ def test_exact_flex_test_preserves_original_measurements(store):
     assert any("no validated record" in note for note in missing["notices"])
 
 
-def test_historical_catalogue_pointer_does_not_become_answer(store):
+def test_mir_historical_answer_uses_only_admitted_documentary_notes(store):
     packet = retrieve_evidence(store, "What happened during the Mir station fire?")
     assert packet["route"]["domain"] == "historical"
-    assert not packet["supported"]
+    assert packet["supported"]
     assert any(item["source_key"] == "MIR-1997" for item in packet["items"])
-    assert all(item["kind"] == "source_pointer" for item in packet["items"])
+    assert all(item["kind"] == "documentary_note" for item in packet["items"])
+    assert not any(item["kind"] == "experiment" for item in packet["items"])
+    missing = retrieve_evidence(store, "What happened during the 1978 Cosmos station fire?")
+    assert not missing["supported"]
 
 
 def test_cross_investigation_evidence_remains_separate(store):

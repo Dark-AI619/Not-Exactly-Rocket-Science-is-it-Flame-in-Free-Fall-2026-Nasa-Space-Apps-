@@ -8,7 +8,7 @@ Use Python 3.12. Install `requirements.txt`, then run `streamlit run app.py`. No
 
 ## Research status
 
-Phase 1 produced a separately preserved, validated transcription subset of FLEX Table IX from [NASA/TP-2015-216046](https://ntrs.nasa.gov/citations/20150023456). Checkpoint 3C reads that subset: 273 validated report-extracted tests and 2,457 original measurement cells. The catalogue includes 329 searchable PDF page passages and 23 sources. BASS-II, SAME-R, and Saffire have no admitted numerical experiment rows. NASA PSI investigation pages are research sources, including [FLEX PSI-69](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69). Original units, source pages, rights, and uncertainty are retained.
+Phase 1 produced a separately preserved, validated transcription subset of FLEX Table IX from [NASA/TP-2015-216046](https://ntrs.nasa.gov/citations/20150023456). Checkpoint 3C reads that subset: 273 validated report-extracted tests and 2,457 original measurement cells. The catalogue now includes 329 searchable PDF page passages, 10 short source-linked documentary notes and 25 sources. BASS-II, SAME-R, and Saffire have no admitted numerical experiment rows. NASA PSI investigation pages are research sources, including [FLEX PSI-69](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69). Original units, source pages, rights, and uncertainty are retained.
 
 ## Artwork and attribution
 
@@ -53,3 +53,7 @@ The official Groq SDK is an optional generation boundary in `backend/groq_adapte
 ## Phase 4C Assistant and Solution Lab
 
 The development-branch Assistant and Solution Lab now use the same `research_turn` service, optional Groq adapter, citation checks and per-session request budget. Assistant retains a short conversation and sends at most two prior questions as phrasing context; only current retrieved evidence supports claims. Solution Lab separates verified observations, checked interpretation, conditional engineering directions, limitations and citations. Missing keys, unsupported questions and provider errors retain the verified evidence view. See `research/PHASE4C_REPORT.md` for tests and remaining limits. No live Groq request or public deployment occurred in this checkpoint.
+
+## Phase 4D documentary research expansion
+
+The development corpus adds ten short factual paraphrases tied to official NASA pages: Mir, Apollo 1, Apollo 13, combustion background and three Spinoff accounts. They occupy a separate searchable documentary table, never the FLEX measurement table. Mir questions now retrieve historical evidence; unrelated incidents remain unsupported. ACME and FLEX-2 are catalogue-only pointers with no admitted numerical data. `migrations/phase4d.py` applies the reviewed manifest to a copy and preserves row hashes of the original scientific tables. `scripts/stage_research.py` prepares new official-source candidates in a local review queue only; it cannot admit them. See `research/PHASE4D_REPORT.md` for provenance, rights, tests and gaps.

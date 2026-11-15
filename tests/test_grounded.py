@@ -42,7 +42,7 @@ def test_exact_experiment_uses_only_routed_evidence_and_verified_citation():
 def test_missing_evidence_and_missing_key_never_call_provider():
     adapter = FakeAdapter(response("Unsupported.", ["E1"]))
     with ResearchStore() as store:
-        missing = answer_question(store, "What happened during the Mir station fire?", adapter)
+        missing = answer_question(store, "What happened during the 1978 Cosmos station fire?", adapter)
         packet = retrieve_evidence(store, "What is flame extinction in FLEX?")
     assert missing.mode == "evidence_only" and missing.status == "missing_evidence"
     adapter.complete.assert_not_called()

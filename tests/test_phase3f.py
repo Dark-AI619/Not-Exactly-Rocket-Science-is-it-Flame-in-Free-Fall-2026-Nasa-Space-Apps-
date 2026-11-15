@@ -29,9 +29,10 @@ def test_five_representative_questions_keep_evidence_and_limits_distinct():
     assert all(measure["original_value"] is not None and measure["original_unit"]
                for measure in record["measurements"])
 
-    assert mir["route"]["domain"] == "historical" and not mir["supported"]
-    assert all(item["kind"] == "source_pointer" and item["investigation_id"] is None
+    assert mir["route"]["domain"] == "historical" and mir["supported"]
+    assert all(item["kind"] == "documentary_note" and item["investigation_id"] is None
                for item in mir["items"])
+    assert {item["source_key"] for item in mir["items"]} == {"MIR-1997"}
     assert not any(item["kind"] == "experiment" for item in mir["items"])
 
     assert set(cross["scopes"]) == {"FLEX", "BASS-II"}

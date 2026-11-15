@@ -49,7 +49,7 @@ def test_session_limit_and_provider_failure_keep_verified_packet():
 def test_missing_key_and_missing_evidence_do_not_spend_request():
     with ResearchStore() as store:
         flex = retrieve_evidence(store, "What is flame extinction in FLEX?")
-        mir = retrieve_evidence(store, "What happened during the Mir station fire?")
+        mir = retrieve_evidence(store, "What happened during the 1978 Cosmos station fire?")
     adapter = MockAdapter(configured=False)
     no_key, used = research_turn(flex, adapter, 0)
     assert no_key.status == "missing_key" and used == 0

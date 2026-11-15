@@ -65,8 +65,10 @@ def route_question(question: str) -> dict:
                    if any(re.search(pattern, text) for pattern in patterns))
     if re.search(r"\bmir\b|apollo|station fire", text):
         domain = "historical"
-    elif re.search(r"technology transfer|spinoff|fireman", text):
+    elif re.search(r"technology transfer|spinoff|fireman|fire detector|fire attire|air tanks", text):
         domain = "transfer"
+    elif re.search(r"researcher.s guide|combustion science", text) and not investigations:
+        domain = "background"
     elif "SAME" in investigations or any(t in topics for t in ("smoke", "sensors")):
         domain = "detection"
     elif any(t in topics for t in ("methods", "limitations")) and not investigations:
@@ -99,6 +101,48 @@ def _source_map(store: ResearchStore) -> dict[str, dict]:
     return {item["url"]: item for item in store.sources(limit=100)}
 
 
+def _note_item(note: dict) -> dict:
+    return {"kind": "documentary_note", "investigation_id": None,
+            "source_title": note["source_title"],
+            "source_identifier": note["source_identifier"] or note["source_key"],
+            "source_url": note["source_url"], "source_key": note["source_key"],
+            "verification_status": note["verification_status"],
+            "location": note["source_location"], "experiment_id": None,
+            "text": note["summary"], "measurements": []}
+
+
+def _documentary_items(store: ResearchStore, question: str, domain: str,
+                       topic_id: str | None) -> list[dict]:
+    """Find a named official page first; broad search never crosses domains."""
+    if domain == "historical":
+        incident_keys = ((r"\bmir\b", "MIR-1997"),
+                         (r"\bapollo[\s-]*1\b", "APOLLO-1"),
+                         (r"\bapollo[\s-]*13\b", "APOLLO-13"))
+        keys = [key for pattern, key in incident_keys if re.search(pattern, question, re.I)]
+        notes = [note for key in keys for note in
+                 store.documentary_notes(source_key=key, topic_id=topic_id, limit=4)]
+        return [_note_item(note) for note in notes[:4]]
+    words = set(re.findall(r"[a-z0-9]+", question.casefold())) - STOPWORDS - {"nasa"}
+    sources = [source for source in store.sources(domain_id=domain, admitted_only=True)
+               if source["admission_status"] == "DOCUMENTARY_ADMITTED"]
+    ranked = sorted(((len(words & set(re.findall(r"[a-z0-9]+", source["title"].casefold()))), source)
+                     for source in sources), key=lambda pair: pair[0], reverse=True)
+    notes = []
+    if ranked and ranked[0][0] >= 1:
+        best = ranked[0][0]
+        for score, source in ranked:
+            if score != best or len(notes) >= 4:
+                break
+            notes.extend(store.documentary_notes(source_key=source["key"], topic_id=topic_id, limit=4))
+    if not notes:
+        for term in [word for word in re.findall(r"[a-z]{4,}", question.casefold())
+                     if word not in STOPWORDS][:3]:
+            notes = store.documentary_notes(term, domain_id=domain, topic_id=topic_id, limit=4)
+            if notes:
+                break
+    return [_note_item(note) for note in notes[:4]]
+
+
 def _experiment_item(store: ResearchStore, experiment_id: str, *, illustrative: bool = False) -> dict:
     experiment = store.experiment(experiment_id)
     provenance = store.provenance(experiment_id)
@@ -122,6 +166,8 @@ def retrieve_evidence(
 ) -> dict:
     """Return a small citation-ready packet; no model or external API is called."""
     route = route_question(question).copy()
+    if route["domain"] == "historical" and investigation_id is not None:
+        raise ResearchError("historical incidents cannot use an experiment investigation scope")
     domains = {row["id"] for row in store.domains()}
     topics_available = {row["id"]: row["domain_id"] for row in store.topics()}
     investigations_available = {row["id"] for row in store.investigations()}
@@ -154,6 +200,10 @@ def retrieve_evidence(
     expansions: list[str] = []
     terms = _search_terms(question, route["topics"])
     primary_topic = topic_id or next((t for t in route["topics"] if t in topics_available), None)
+
+    if not scopes and route["domain"] in ("historical", "background", "transfer"):
+        documentary_topic = primary_topic if topics_available.get(primary_topic) == route["domain"] else None
+        items.extend(_documentary_items(store, question, route["domain"], documentary_topic))
 
     for investigation in scopes:
         coverage = store.coverage(investigation)
@@ -223,7 +273,7 @@ def retrieve_evidence(
                               "location": evidence["source_location"], "experiment_id": None,
                               "text": evidence["summary"], "measurements": []})
 
-    if not scopes or not items:
+    if not items:
         # Catalogue pointers support discovery, never factual answers on their own.
         candidates = store.sources(domain_id=route["domain"], limit=30)
         query_words = [w for w in re.findall(r"[a-z0-9]+", question.casefold())

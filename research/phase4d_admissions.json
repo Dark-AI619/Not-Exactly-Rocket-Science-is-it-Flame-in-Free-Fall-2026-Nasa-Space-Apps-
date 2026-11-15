@@ -1,0 +1,90 @@
+{
+  "version": "4D-2026-11-15",
+  "rights_basis": "NASA_WEB_FACT_PARAPHRASE_ONLY",
+  "rights_guidance_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  "checked_on": "2026-11-15",
+  "notes": [
+    {
+      "source_key": "MIR-1997",
+      "location": "Article introduction and Kvant-1 incident account",
+      "topic_id": "incident",
+      "summary": "On 24 February 1997, a solid-fuel oxygen-generator canister ignited in Mir's Kvant-1 module. The fire produced dense smoke and blocked access to one Soyuz escape craft while six crew members were aboard."
+    },
+    {
+      "source_key": "MIR-1997",
+      "location": "Crew response and aftermath",
+      "topic_id": "incident",
+      "summary": "Mir crew members used oxygen masks and foam extinguishers during the 1997 fire. The flame ultimately went out, and the station's life-support system cleared the smoke over the following hours. This was an incident, not a controlled experiment."
+    },
+    {
+      "source_key": "APOLLO-1",
+      "location": "AS-204 Accident",
+      "topic_id": "incident",
+      "summary": "On 27 January 1967, an AS-204 preflight test ended in a command-module fire that killed astronauts Grissom, White and Chaffee. The cabin was pressurized with pure oxygen during the test."
+    },
+    {
+      "source_key": "APOLLO-1",
+      "location": "Accident Investigation and Lessons Learned",
+      "topic_id": "incident",
+      "summary": "The Apollo 1 review did not identify one definite ignition source. NASA later changed the command-module hatch and restricted combustible cabin materials."
+    },
+    {
+      "source_key": "APOLLO-13",
+      "location": "Apollo 13 History: Oxygen Tank Explosion",
+      "topic_id": "incident",
+      "summary": "An oxygen-tank explosion damaged Apollo 13's oxygen and fuel-cell systems during flight and ended the planned lunar landing. This was a spacecraft-system accident, not a controlled flame experiment."
+    },
+    {
+      "source_key": "NASA-COMBUSTION",
+      "location": "Archived Combustion Experiments and Combustion Integrated Rack",
+      "topic_id": "methods",
+      "summary": "NASA's combustion programme page lists FLEX, BASS, Saffire, SAME and SPICE among archived investigations. It describes the Combustion Integrated Rack as an International Space Station facility dedicated to combustion research."
+    },
+    {
+      "source_key": "NASA-GUIDE",
+      "location": "Researcher's Guide article overview",
+      "topic_id": "methods",
+      "summary": "NASA's combustion research guide explains that reduced gravity suppresses buoyancy, simplifying some flame analyses. It identifies spacecraft fire safety as a concern for exploration missions."
+    },
+    {
+      "source_key": "SPINOFF-DETECTOR",
+      "location": "Article summary",
+      "topic_id": "technology",
+      "summary": "A NASA Spinoff entry describes an incipient fire detector used in space shuttle orbiters that sampled airborne combustion particles and distinguished them from dust. This is a technology-transfer account, not an experiment result."
+    },
+    {
+      "source_key": "SPINOFF-TANKS",
+      "location": "Article summary",
+      "topic_id": "technology",
+      "summary": "A NASA Spinoff entry describes a Johnson Space Center collaboration on lighter firefighter air tanks. This is a technology-transfer account, not a spacecraft fire experiment."
+    },
+    {
+      "source_key": "SPINOFF-ATTIRE",
+      "location": "Article summary",
+      "topic_id": "technology",
+      "summary": "A NASA Spinoff entry describes Project FIRES, a NASA and FEMA effort applying Apollo-era materials and design ideas to firefighter protective gear. This is a technology-transfer account."
+    }
+  ],
+  "catalogue_only": [
+    {
+      "key": "NASA-FLEX-2",
+      "title": "Flame Extinguishment Experiment-2 (FLEX-2)",
+      "url": "https://gipoc.grc.nasa.gov/wp/fcf-cir/flex-2/",
+      "identifier": "NASA Glenn FLEX-2 overview",
+      "domain_id": "combustion",
+      "topic_id": "droplet",
+      "source_type": "INVESTIGATION",
+      "note": "Official overview verified; no source-linked numerical table admitted."
+    },
+    {
+      "key": "NASA-ACME",
+      "title": "Advanced Combustion Microgravity Experiment (ACME) Facility",
+      "url": "https://science.nasa.gov/biological-physical/investigations/acme/",
+      "identifier": "NASA ACME overview",
+      "domain_id": "combustion",
+      "topic_id": "gas",
+      "source_type": "INVESTIGATION",
+      "note": "Official overview verified; no source-linked numerical table admitted."
+    }
+  ]
+}

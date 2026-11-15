@@ -51,7 +51,7 @@ class Phase3AAudit(unittest.TestCase):
     def test_integrity_and_source_links(self):
         self.assertEqual(self.db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
         self.assertEqual(self.db.execute("PRAGMA foreign_key_check").fetchall(), [])
-        self.assertEqual(self.count("source_catalogue"), 23)
+        self.assertEqual(self.count("source_catalogue"), 25)
         self.assertEqual(
             self.db.execute("SELECT count(*) FROM source_catalogue WHERE source_id IS NOT NULL").fetchone()[0],
             7,

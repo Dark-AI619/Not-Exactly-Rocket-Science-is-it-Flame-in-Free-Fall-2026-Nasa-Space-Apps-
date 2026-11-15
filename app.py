@@ -94,14 +94,25 @@ h1,h2,h3 {font-family:'Space Grotesk',sans-serif;letter-spacing:-.035em}
 .effect-art {max-width:600px;margin:auto}
 .effect-art img {border-radius:11px}
 .effect-label {color:#adc2c7;font-size:.8rem;text-align:center;padding:.9rem .4rem .1rem}
-.droplet-stage {height:220px;display:grid;place-items:center;background:radial-gradient(circle,#193d45,#101b20 70%);border:1px solid #3a5960;border-radius:14px;margin:.5rem 0 1rem}
-.droplet {border-radius:50%;background:radial-gradient(circle at 32% 28%,#c1fcfa,#59cbd5 55%,#257987);box-shadow:0 0 18px #4bc6d444;border:1px solid #c2f8f6;transition:width .16s linear,height .16s linear}
+.droplet-stage {height:260px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse at center,#47251955,transparent 58%),radial-gradient(circle at 18% 24%,#91ceda88 0 1px,transparent 2px),radial-gradient(circle at 80% 68%,#91ceda66 0 1px,transparent 2px),#0b141d;border:1px solid #655047;border-radius:16px;margin:.5rem 0 1rem;box-shadow:inset 0 0 60px #0005}
+.droplet {position:relative;border-radius:50%;background:radial-gradient(circle at 40% 38%,#fff8d8 0%,#ffdc7a 22%,#ff9c32 48%,#e84e16 72%,#9c2510 100%);box-shadow:0 0 18px #ffb34b99,0 0 42px #f66a263d,inset -8px -9px 18px #9b260c77;border:1px solid #ffd393;transition:width .16s linear,height .16s linear}.droplet::before {content:"";position:absolute;inset:-16%;border-radius:46% 54% 51% 49%;border:2px solid #ffb25366;background:radial-gradient(ellipse at 35% 20%,#fff0b433,transparent 60%);box-shadow:0 0 16px #ff761d44;transform:rotate(-24deg)}
 .model-note {color:#a9c1c7;font-size:.84rem;line-height:1.55}
 .step {display:inline-block;color:#f1a16d;font-size:.8rem;font-weight:700;margin-bottom:.5rem}
 div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea {background:#14232a;border:1px solid #3c555e;color:#e8f2f3}
 div[data-testid="stSelectbox"] > div {background:#14232a}
 div[data-testid="stTextInput"] label,div[data-testid="stSelectbox"] label,div[data-testid="stTextArea"] label {color:#c3d4d7}
 div[data-testid="stAlert"] {border-radius:10px}
+/* Focused final contrast and hierarchy polish. */
+h1,h2,h3 {color:#f3fafc}
+.eyebrow {color:#9debf0}
+.surface {background:linear-gradient(135deg,#20313a,#17252c);border-color:#43606b;box-shadow:0 8px 22px #0002}
+.hero-art {border-color:#60737a;box-shadow:0 10px 30px #0004}
+.hero-copy h1 {text-shadow:0 3px 24px #72dce218}
+[data-testid="stButton"] button, [data-testid="stLinkButton"] a {border-color:#54717d;background-color:#20343e;color:#eef9fc}
+[data-testid="stButton"] button:hover, [data-testid="stLinkButton"] a:hover {border-color:#99edf1;background-color:#294550;color:#fff}
+[data-testid="stButton"] button[kind="primary"] {background:#82e5eb;color:#10232a;border-color:#a8f6f7;box-shadow:0 3px 14px #6cdce52b}
+[data-testid="stChatMessage"] {background:#1b2c35;border:1px solid #3e5b67;border-radius:14px}
+[data-testid="stExpander"] {border-color:#435e69}
 @media(max-width:800px){.block-container{padding:1.1rem 1rem 3rem}.hero-copy h1{font-size:2.8rem}.chart-frame{height:280px}.data-table{min-width:720px}}
 </style>
 """,
@@ -620,11 +631,11 @@ def compare():
                         "x_status": "X classification", "y_status": "Y classification",
                         "x_page": "X PDF page", "y_page": "Y PDF page"},
             )
-            figure.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+            figure.update_layout(template="plotly_dark", paper_bgcolor="#172831", plot_bgcolor="#172831",
                                  font_color="#dbe9ec", legend_title_text="Fuel / reported outcome",
                                  margin=dict(l=20, r=20, t=25, b=20), height=500)
-            figure.update_xaxes(gridcolor="#304750", zerolinecolor="#405660")
-            figure.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
+            figure.update_xaxes(gridcolor="#3c5662", zerolinecolor="#405660")
+            figure.update_yaxes(gridcolor="#3c5662", zerolinecolor="#405660")
             st.plotly_chart(figure, width="stretch")
             st.caption("Descriptive scatter of reported values only. Colour groups fuels; symbols show the report's test outcome. No causal fit or prediction is implied.")
 
@@ -633,10 +644,10 @@ def compare():
                 distribution = px.box(plot, x="fuel", y="y_numeric_value", color="fuel",
                                   color_discrete_sequence=["#72dce2", "#f2a16e", "#9ca9ff", "#b5dc8c"],
                                   labels={"fuel": "Fuel", "y_numeric_value": f"{labels[y_var]} ({comparison.y_unit})"})
-                distribution.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+                distribution.update_layout(template="plotly_dark", paper_bgcolor="#172831", plot_bgcolor="#172831",
                                        font_color="#dbe9ec", showlegend=False,
                                        margin=dict(l=20, r=20, t=25, b=20), height=340)
-                distribution.update_yaxes(gridcolor="#304750", zerolinecolor="#405660")
+                distribution.update_yaxes(gridcolor="#3c5662", zerolinecolor="#405660")
                 st.plotly_chart(distribution, width="stretch")
                 st.caption("Box summaries are calculated from the plotted subset with Pandas and Plotly; they are not values printed in the NASA report.")
             else:
@@ -899,9 +910,9 @@ def simulation_player(model):
         st.session_state["sim_playing"] = False
         st.session_state["sim_time_s"] = 0.0
         st.rerun()
-    diameter_px = max(5, round(160 * diameter / model.initial_diameter_mm))
-    html(f'<div class="droplet-stage" role="img" aria-label="Schematic predicted droplet diameter {diameter:.2f} millimeters"><div class="droplet" style="width:{diameter_px}px;height:{diameter_px}px"></div></div>')
-    st.caption("Schematic droplet size · cyan circle represents predicted liquid diameter, not a flame or measured image.")
+    diameter_px = round(160 * diameter / model.initial_diameter_mm)
+    html(f'<div class="droplet-stage" role="img" aria-label="Schematic flame visualization; model-driven droplet diameter {diameter:.2f} millimeters"><div class="droplet" style="width:{diameter_px}px;height:{diameter_px}px;opacity:{1 if diameter > 0 else 0}"></div></div>')
+    st.caption("Schematic flame visualization · model-driven droplet size · not an experimentally observed flame image. The warm halo is illustrative; only liquid diameter is calculated.")
     current, elapsed, ideal = st.columns(3)
     current.metric("Predicted diameter", f"{diameter:.2f} mm")
     elapsed.metric("Model elapsed time", f"{t:.1f} s")
@@ -912,12 +923,12 @@ def simulation_player(model):
                                 mode="lines", name="D-squared model", line=dict(color="#72dce2", width=3)))
     figure.add_trace(go.Scatter(x=[t], y=[diameter], mode="markers", name="Current model state",
                                 marker=dict(color="#f2a16e", size=12)))
-    figure.update_layout(template="plotly_dark", paper_bgcolor="#142127", plot_bgcolor="#142127",
+    figure.update_layout(template="plotly_dark", paper_bgcolor="#172831", plot_bgcolor="#172831",
                          font_color="#dbe9ec", height=340, margin=dict(l=25, r=15, t=25, b=20),
                          xaxis_title="Model elapsed time (s)", yaxis_title="Predicted droplet diameter (mm)",
                          showlegend=True)
-    figure.update_xaxes(range=[0, end], gridcolor="#304750")
-    figure.update_yaxes(range=[0, model.initial_diameter_mm * 1.08], gridcolor="#304750")
+    figure.update_xaxes(range=[0, end], gridcolor="#3c5662")
+    figure.update_yaxes(range=[0, model.initial_diameter_mm * 1.08], gridcolor="#3c5662")
     st.plotly_chart(figure, width="stretch", key="sim_diameter_chart")
 
 
